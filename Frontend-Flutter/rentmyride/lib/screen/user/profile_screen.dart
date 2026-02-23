@@ -30,6 +30,14 @@ class ProfileScreen extends StatelessWidget {
         isDark ? AppColors.darkAccent : AppColors.lightSecondary;
     final successColor =
         isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = EdgeInsets.symmetric(
+      horizontal: isCompactPhone ? AppSpacing.md : AppSpacing.lg,
+    );
+    final headerPadding = EdgeInsets.all(
+      isCompactPhone ? AppSpacing.lg : AppSpacing.xl,
+    );
+    final favoritesHeight = isCompactPhone ? 108.0 : 120.0;
 
     final userService = context.watch<UserService>();
     final vehicleService = context.watch<VehicleService>();
@@ -378,7 +386,7 @@ class ProfileScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: headerPadding,
                 child: Column(
                   children: [
                     Stack(
@@ -461,7 +469,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Row(
                   children: [
                     Expanded(
@@ -490,7 +498,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Text(
                   'Verification',
                   style: context.textStyles.titleMedium?.copyWith(
@@ -500,7 +508,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.md),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Container(
                   padding: AppSpacing.paddingLg,
                   decoration: BoxDecoration(
@@ -571,7 +579,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               if (!user.isVerified)
                 Padding(
-                  padding: AppSpacing.horizontalLg,
+                  padding: horizontalPadding,
                   child: Container(
                     margin: const EdgeInsets.only(top: AppSpacing.sm),
                     padding: AppSpacing.paddingMd,
@@ -596,7 +604,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -618,7 +626,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               if (bookings.isEmpty)
                 Padding(
-                  padding: AppSpacing.horizontalLg,
+                  padding: horizontalPadding,
                   child: const ProfileSectionEmptyState(
                     title: 'No bookings yet',
                     subtitle: 'Your confirmed trips will appear here.',
@@ -626,7 +634,7 @@ class ProfileScreen extends StatelessWidget {
                 )
               else
                 Padding(
-                  padding: AppSpacing.horizontalLg,
+                  padding: horizontalPadding,
                   child: Column(
                     children: bookings
                         .take(4)
@@ -649,7 +657,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -671,7 +679,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               if (favoriteVehicles.isEmpty)
                 Padding(
-                  padding: AppSpacing.horizontalLg,
+                  padding: horizontalPadding,
                   child: const ProfileSectionEmptyState(
                     title: 'No favorites yet',
                     subtitle: 'Tap the heart on a vehicle to save it here.',
@@ -679,9 +687,9 @@ class ProfileScreen extends StatelessWidget {
                 )
               else
                 SizedBox(
-                  height: 120,
+                  height: favoritesHeight,
                   child: ListView.builder(
-                    padding: AppSpacing.horizontalLg,
+                    padding: horizontalPadding,
                     scrollDirection: Axis.horizontal,
                     itemCount: favoriteVehicles.length,
                     itemBuilder: (context, index) {
@@ -698,7 +706,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Text(
                   'Payment Methods',
                   style: context.textStyles.titleMedium?.copyWith(
@@ -708,7 +716,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Column(
                   children: [
                     ...paymentMethods.map(
@@ -783,7 +791,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Text(
                   'Support',
                   style: context.textStyles.titleMedium?.copyWith(
@@ -793,7 +801,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: Column(
                   children: [
                     ProfileMenuItem(
@@ -813,7 +821,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xl),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: horizontalPadding,
                 child: GestureDetector(
                   onTap: () {
                     context.read<UserService>().logout();
@@ -1070,3 +1078,4 @@ class _LicenseVerificationSheetState extends State<_LicenseVerificationSheet> {
     );
   }
 }
+

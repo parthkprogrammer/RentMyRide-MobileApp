@@ -114,6 +114,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   isDark ? AppColors.darkError : AppColors.lightError;
               final dividerColor =
                   isDark ? AppColors.darkDivider : AppColors.lightDivider;
+              final isCompactSheet = MediaQuery.sizeOf(context).width < 380;
               final notifications =
                   notificationService.notificationsForUser(admin.id);
 
@@ -122,22 +123,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          'Incoming Notifications',
-                          style: context.textStyles.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                    if (isCompactSheet)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Incoming Notifications',
+                            style: context.textStyles.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () =>
-                              notificationService.markAllRead(admin.id),
-                          child: const Text('Mark all read'),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () =>
+                                  notificationService.markAllRead(admin.id),
+                              child: const Text('Mark all read'),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        children: [
+                          Text(
+                            'Incoming Notifications',
+                            style: context.textStyles.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () =>
+                                notificationService.markAllRead(admin.id),
+                            child: const Text('Mark all read'),
+                          ),
+                        ],
+                      ),
                     if (notifications.isEmpty)
                       const ListTile(
                         contentPadding: EdgeInsets.zero,
@@ -148,6 +171,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ...notifications.map((entry) {
                         final isEmergency =
                             entry.type == AppNotificationType.emergency;
+                        final timeLabel =
+                            '${entry.createdAt.hour.toString().padLeft(2, '0')}:${entry.createdAt.minute.toString().padLeft(2, '0')}';
                         return Container(
                           margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                           decoration: BoxDecoration(
@@ -173,20 +198,37 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                       : Icons.notifications_active_rounded),
                               color: isEmergency ? errorColor : null,
                             ),
-                            title: Text(entry.title),
-                            subtitle: Text(entry.message),
-                            trailing: isEmergency
+                            title: Text(
+                              entry.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: isCompactSheet
                                 ? Text(
-                                    'EMERGENCY',
-                                    style:
-                                        context.textStyles.labelSmall?.copyWith(
-                                      color: errorColor,
-                                      fontWeight: FontWeight.bold,
+                                    '${entry.message}\n${isEmergency ? 'EMERGENCY' : timeLabel}',
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.textStyles.bodySmall?.copyWith(
+                                      color: isEmergency ? errorColor : null,
+                                      fontWeight: isEmergency
+                                          ? FontWeight.w600
+                                          : null,
                                     ),
                                   )
-                                : Text(
-                                    '${entry.createdAt.hour.toString().padLeft(2, '0')}:${entry.createdAt.minute.toString().padLeft(2, '0')}',
-                                  ),
+                                : Text(entry.message),
+                            isThreeLine: isCompactSheet,
+                            trailing: isCompactSheet
+                                ? null
+                                : (isEmergency
+                                    ? Text(
+                                        'EMERGENCY',
+                                        style: context.textStyles.labelSmall
+                                            ?.copyWith(
+                                          color: errorColor,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    : Text(timeLabel)),
                             onTap: () => notificationService.markRead(
                               userId: admin.id,
                               notificationId: entry.id,
@@ -565,6 +607,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final successColor =
         isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
     final errorColor = isDark ? AppColors.darkError : AppColors.lightError;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
+    final headerPadding = EdgeInsets.fromLTRB(
+      horizontalPadding,
+      AppSpacing.md,
+      horizontalPadding,
+      AppSpacing.md,
+    );
+    final sectionPadding = EdgeInsets.all(horizontalPadding);
 
     final userService = context.watch<UserService>();
     final vehicleService = context.watch<VehicleService>();
@@ -627,82 +678,80 @@ class _AdminDashboardState extends State<AdminDashboard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: AppSpacing.paddingLg,
+                padding: headerPadding,
                 decoration: BoxDecoration(
                   color: surfaceColor,
                   border: Border(bottom: BorderSide(color: dividerColor)),
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Admin Control Center',
-                                style: context.textStyles.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Dynamic governance and operational controls',
-                                style: context.textStyles.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ),
-                        Stack(
-                          clipBehavior: Clip.none,
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compactHeader = constraints.maxWidth < 460;
+                        final quickActions = Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            IconButton(
-                              tooltip: 'Notifications',
-                              onPressed: _openAdminNotifications,
-                              icon: const Icon(Icons.notifications_none_rounded),
-                            ),
-                            if (unreadCount > 0)
-                              Positioned(
-                                right: 4,
-                                top: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 5,
-                                    vertical: 1,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: errorColor,
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.full,
-                                    ),
-                                  ),
-                                  constraints:
-                                      const BoxConstraints(minWidth: 16),
-                                  child: Text(
-                                    unreadCount > 9 ? '9+' : '$unreadCount',
-                                    textAlign: TextAlign.center,
-                                    style:
-                                        context.textStyles.labelSmall?.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                IconButton(
+                                  tooltip: 'Notifications',
+                                  onPressed: _openAdminNotifications,
+                                  visualDensity: compactHeader
+                                      ? VisualDensity.compact
+                                      : null,
+                                  icon: const Icon(
+                                    Icons.notifications_none_rounded,
                                   ),
                                 ),
+                                if (unreadCount > 0)
+                                  Positioned(
+                                    right: 4,
+                                    top: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 5,
+                                        vertical: 1,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: errorColor,
+                                        borderRadius: BorderRadius.circular(
+                                          AppRadius.full,
+                                        ),
+                                      ),
+                                      constraints:
+                                          const BoxConstraints(minWidth: 16),
+                                      child: Text(
+                                        unreadCount > 9 ? '9+' : '$unreadCount',
+                                        textAlign: TextAlign.center,
+                                        style: context.textStyles.labelSmall
+                                            ?.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            IconButton(
+                              tooltip: 'Emergency Notification',
+                              onPressed: _sendEmergencyNotification,
+                              visualDensity: compactHeader
+                                  ? VisualDensity.compact
+                                  : null,
+                              icon: Icon(
+                                Icons.notification_important_rounded,
+                                color: errorColor,
                               ),
+                            ),
                           ],
-                        ),
-                        IconButton(
-                          tooltip: 'Emergency Notification',
-                          onPressed: _sendEmergencyNotification,
-                          icon: Icon(
-                            Icons.notification_important_rounded,
-                            color: errorColor,
-                          ),
-                        ),
-                        GestureDetector(
+                        );
+
+                        final profileAvatar = GestureDetector(
                           onTap: () => context.push('/admin-profile'),
                           child: CircleAvatar(
-                            radius: 20,
+                            radius: compactHeader ? 18 : 20,
                             backgroundColor: primaryColor,
                             child: Text(
                               (currentAdmin?.name ?? 'A')
@@ -713,8 +762,76 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        );
+
+                        if (compactHeader) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Admin Control Center',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: context.textStyles.titleLarge
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Dynamic governance and operational controls',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: context.textStyles.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  profileAvatar,
+                                ],
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: quickActions,
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Admin Control Center',
+                                    style: context.textStyles.titleLarge
+                                        ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Dynamic governance and operational controls',
+                                    style: context.textStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            quickActions,
+                            const SizedBox(width: AppSpacing.sm),
+                            profileAvatar,
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: AppSpacing.md),
                     TextField(
@@ -753,33 +870,60 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 ),
               ),
               Padding(
-                padding: AppSpacing.paddingLg,
+                padding: sectionPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (_showSection('Overview')) ...[
-                      Row(
-                        children: [
-                          Expanded(
-                            child: MetricCard(
-                              icon: Icons.group_rounded,
-                              label: 'Users',
-                              value: '${users.length}',
-                              trend: '$flaggedUsers flagged',
-                              isPositive: flaggedUsers == 0,
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: MetricCard(
-                              icon: Icons.directions_car_rounded,
-                              label: 'Active Fleet',
-                              value: '${vehicleService.vehicles.length}',
-                              trend: '${pendingSubmissions.length} pending',
-                              isPositive: true,
-                            ),
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compactMetrics = constraints.maxWidth < 560;
+                          if (compactMetrics) {
+                            return Column(
+                              children: [
+                                MetricCard(
+                                  icon: Icons.group_rounded,
+                                  label: 'Users',
+                                  value: '${users.length}',
+                                  trend: '$flaggedUsers flagged',
+                                  isPositive: flaggedUsers == 0,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                MetricCard(
+                                  icon: Icons.directions_car_rounded,
+                                  label: 'Active Fleet',
+                                  value: '${vehicleService.vehicles.length}',
+                                  trend: '${pendingSubmissions.length} pending',
+                                  isPositive: true,
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: MetricCard(
+                                  icon: Icons.group_rounded,
+                                  label: 'Users',
+                                  value: '${users.length}',
+                                  trend: '$flaggedUsers flagged',
+                                  isPositive: flaggedUsers == 0,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: MetricCard(
+                                  icon: Icons.directions_car_rounded,
+                                  label: 'Active Fleet',
+                                  value: '${vehicleService.vehicles.length}',
+                                  trend:
+                                      '${pendingSubmissions.length} pending',
+                                  isPositive: true,
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: AppSpacing.lg),
                     ],
@@ -940,32 +1084,42 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: AppSpacing.md,
-                          mainAxisSpacing: AppSpacing.md,
-                          childAspectRatio: 1.3,
-                        ),
-                        itemCount: adminService.systemCommands.length,
-                        itemBuilder: (context, index) {
-                          final command = adminService.systemCommands[index];
-                          return _CommandCard(
-                            icon: _iconForCommand(command.iconKey),
-                            label: command.label,
-                            description: command.description,
-                            stateLabel: command.state.name.toUpperCase(),
-                            onTap: () => context
-                                .read<AdminService>()
-                                .runSystemCommand(command.id),
-                            stateColor: switch (command.state) {
-                              SystemCommandState.completed => successColor,
-                              SystemCommandState.running => primaryColor,
-                              SystemCommandState.failed => errorColor,
-                              SystemCommandState.idle => null,
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final width = constraints.maxWidth;
+                          final crossAxisCount = width < 520 ? 1 : 2;
+                          final childAspectRatio = crossAxisCount == 1
+                              ? (width < 360 ? 1.9 : 2.3)
+                              : (width < 760 ? 1.05 : 1.3);
+
+                          return GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: AppSpacing.md,
+                              mainAxisSpacing: AppSpacing.md,
+                              childAspectRatio: childAspectRatio,
+                            ),
+                            itemCount: adminService.systemCommands.length,
+                            itemBuilder: (context, index) {
+                              final command = adminService.systemCommands[index];
+                              return _CommandCard(
+                                icon: _iconForCommand(command.iconKey),
+                                label: command.label,
+                                description: command.description,
+                                stateLabel: command.state.name.toUpperCase(),
+                                onTap: () => context
+                                    .read<AdminService>()
+                                    .runSystemCommand(command.id),
+                                stateColor: switch (command.state) {
+                                  SystemCommandState.completed => successColor,
+                                  SystemCommandState.running => primaryColor,
+                                  SystemCommandState.failed => errorColor,
+                                  SystemCommandState.idle => null,
+                                },
+                              );
                             },
                           );
                         },
@@ -979,13 +1133,21 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openBroadcastDialog,
-        icon: const Icon(Icons.campaign_rounded),
-        label: const Text('Broadcast Notice'),
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: isCompactPhone
+          ? FloatingActionButton(
+              onPressed: _openBroadcastDialog,
+              tooltip: 'Broadcast Notice',
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.campaign_rounded),
+            )
+          : FloatingActionButton.extended(
+              onPressed: _openBroadcastDialog,
+              icon: const Icon(Icons.campaign_rounded),
+              label: const Text('Broadcast Notice'),
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
     );
   }
 }
@@ -1072,6 +1234,8 @@ class _BroadcastNotificationSheetState
   @override
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
+    final isCompactSheet = MediaQuery.sizeOf(context).width < 360;
+    final horizontalPadding = isCompactSheet ? AppSpacing.md : AppSpacing.lg;
 
     return SafeArea(
       child: AnimatedPadding(
@@ -1082,10 +1246,10 @@ class _BroadcastNotificationSheetState
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
+            padding: EdgeInsets.fromLTRB(
+              horizontalPadding,
               AppSpacing.md,
-              AppSpacing.lg,
+              horizontalPadding,
               AppSpacing.lg,
             ),
             child: Form(
@@ -1128,19 +1292,17 @@ class _BroadcastNotificationSheetState
                             : null,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isSending
-                              ? null
-                              : () => Navigator.pop(context, false),
+                  if (isCompactSheet)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        OutlinedButton(
+                          onPressed:
+                              _isSending ? null : () => Navigator.pop(context, false),
                           child: const Text('Cancel'),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: ElevatedButton.icon(
+                        const SizedBox(height: AppSpacing.sm),
+                        ElevatedButton.icon(
                           onPressed: _isSending ? null : _sendBroadcast,
                           icon: _isSending
                               ? const SizedBox(
@@ -1154,9 +1316,38 @@ class _BroadcastNotificationSheetState
                               : const Icon(Icons.campaign_rounded),
                           label: Text(_isSending ? 'Sending...' : 'Send'),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isSending
+                                ? null
+                                : () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isSending ? null : _sendBroadcast,
+                            icon: _isSending
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.campaign_rounded),
+                            label: Text(_isSending ? 'Sending...' : 'Send'),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -1507,6 +1698,8 @@ class _CommandCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: context.textStyles.labelLarge?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -1521,6 +1714,8 @@ class _CommandCard extends StatelessWidget {
             const Spacer(),
             Text(
               stateLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: context.textStyles.labelSmall?.copyWith(
                 color: stateColor,
               ),

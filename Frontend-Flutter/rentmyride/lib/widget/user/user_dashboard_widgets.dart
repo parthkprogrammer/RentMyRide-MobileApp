@@ -19,6 +19,10 @@ class DashboardActionButton extends StatelessWidget {
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final borderColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
     final errorColor = isDark ? AppColors.darkError : AppColors.lightError;
+    final isCompactPhone = context.isCompactPhone;
+    final buttonSize = isCompactPhone ? 42.0 : 48.0;
+    final iconSize = isCompactPhone ? 20.0 : 22.0;
+    final badgeSize = isCompactPhone ? 14.0 : 16.0;
 
     return Material(
       color: Colors.transparent,
@@ -26,8 +30,8 @@ class DashboardActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.full),
         child: Container(
-          width: 48,
-          height: 48,
+          width: buttonSize,
+          height: buttonSize,
           decoration: BoxDecoration(
             color: surfaceColor,
             borderRadius: BorderRadius.circular(AppRadius.full),
@@ -35,14 +39,14 @@ class DashboardActionButton extends StatelessWidget {
           ),
           child: Stack(
             children: [
-              Center(child: Icon(icon, size: 22)),
+              Center(child: Icon(icon, size: iconSize)),
               if (badgeCount > 0)
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  top: isCompactPhone ? 6 : 8,
+                  right: isCompactPhone ? 6 : 8,
                   child: Container(
-                    width: 16,
-                    height: 16,
+                    width: badgeSize,
+                    height: badgeSize,
                     decoration: BoxDecoration(
                       color: errorColor,
                       shape: BoxShape.circle,
@@ -52,7 +56,7 @@ class DashboardActionButton extends StatelessWidget {
                         badgeCount > 9 ? '9+' : '$badgeCount',
                         style: context.textStyles.labelSmall?.copyWith(
                           color: Colors.white,
-                          fontSize: 9,
+                          fontSize: isCompactPhone ? 8 : 9,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -136,12 +140,14 @@ class CategoryChip extends StatelessWidget {
         isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
     final surfaceColor =
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final horizontalPadding =
+        context.isCompactPhone ? AppSpacing.md : AppSpacing.lg;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
@@ -155,7 +161,11 @@ class CategoryChip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: isSelected ? Colors.white : null),
+            Icon(
+              icon,
+              size: context.isCompactPhone ? 16 : 18,
+              color: isSelected ? Colors.white : null,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Text(
               label,
@@ -183,11 +193,16 @@ class VehicleCard extends StatelessWidget {
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final primaryColor =
         isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardWidth = (screenWidth * (context.isCompactPhone ? 0.82 : 0.72))
+        .clamp(220.0, 300.0)
+        .toDouble();
+    final imageHeight = context.isCompactPhone ? 148.0 : 160.0;
 
     return GestureDetector(
       onTap: () => context.push('/vehicle/${vehicle.id}'),
       child: Container(
-        width: 260,
+        width: cardWidth,
         margin: const EdgeInsets.only(right: AppSpacing.md),
         decoration: BoxDecoration(
           color: surfaceColor,
@@ -208,7 +223,7 @@ class VehicleCard extends StatelessWidget {
                   ),
                   child: Image(
                     image: imageProviderWithFallback(vehicle.imageUrl),
-                    height: 160,
+                    height: imageHeight,
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),

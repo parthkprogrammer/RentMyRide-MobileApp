@@ -15,13 +15,16 @@ class ChatScreen extends StatelessWidget {
     final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
     final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final successColor = isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
+    final actionButtonSize = isCompactPhone ? 42.0 : 48.0;
 
     return Scaffold(
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
               vertical: AppSpacing.md,
             ),
             decoration: BoxDecoration(
@@ -95,8 +98,8 @@ class ChatScreen extends StatelessWidget {
                     ),
                   ),
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: actionButtonSize,
+                    height: actionButtonSize,
                     decoration: BoxDecoration(
                       color: const Color(0xFFE3F2FD),
                       borderRadius: BorderRadius.circular(AppRadius.md),
@@ -148,7 +151,7 @@ class ChatScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
                               'Tesla Model 3 (2023)',
                               style: context.textStyles.titleMedium?.copyWith(
@@ -159,19 +162,25 @@ class ChatScreen extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE3F2FD),
-                              borderRadius: BorderRadius.circular(AppRadius.full),
-                            ),
-                            child: Text(
-                              'ID: #$bookingId',
-                              style: context.textStyles.labelSmall?.copyWith(
-                                color: primaryColor,
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE3F2FD),
+                                  borderRadius:
+                                      BorderRadius.circular(AppRadius.full),
+                                ),
+                                child: Text(
+                                  'ID: #$bookingId',
+                                  style: context.textStyles.labelSmall?.copyWith(
+                                    color: primaryColor,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -192,24 +201,28 @@ class ChatScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: successColor,
+                            borderRadius: BorderRadius.circular(AppRadius.full),
+                          ),
+                          child: Text(
+                            'Confirmed',
+                            style: context.textStyles.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: successColor,
-                    borderRadius: BorderRadius.circular(AppRadius.full),
-                  ),
-                  child: Text(
-                    'Confirmed',
-                    style: context.textStyles.labelSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
                 ),
               ],
@@ -365,11 +378,11 @@ class ChatScreen extends StatelessWidget {
                 padding: AppSpacing.horizontalLg,
                 child: Row(
                   children: [
-                    QuickReplyChip(label: 'On my way! ðŸš—'),
+                    QuickReplyChip(label: 'On my way!'),
                     const SizedBox(width: AppSpacing.sm),
                     QuickReplyChip(label: 'Where are you?'),
                     const SizedBox(width: AppSpacing.sm),
-                    QuickReplyChip(label: 'Thanks! ðŸ™'),
+                    QuickReplyChip(label: 'Thanks!'),
                     const SizedBox(width: AppSpacing.sm),
                     QuickReplyChip(label: 'I\'m running late'),
                   ],
@@ -455,3 +468,4 @@ class ChatScreen extends StatelessWidget {
     );
   }
 }
+

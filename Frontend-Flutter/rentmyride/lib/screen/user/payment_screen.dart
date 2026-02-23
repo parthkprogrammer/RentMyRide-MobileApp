@@ -70,6 +70,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final successColor =
         isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
     final bottomInset = MediaQuery.of(context).padding.bottom + 140;
 
     Future<void> onPayNow() async {
@@ -141,7 +143,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
     return Scaffold(
       bottomNavigationBar: Container(
-        padding: AppSpacing.paddingLg,
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          AppSpacing.md,
+          horizontalPadding,
+          AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           color: surfaceColor,
           border: Border(
@@ -170,11 +177,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   Icon(Icons.lock_outline_rounded,
                       size: 16, color: successColor),
                   const SizedBox(width: 4),
-                  Text(
-                    'Payment Confidence Guaranteed',
-                    style: context.textStyles.bodySmall?.copyWith(
-                      color: successColor,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      'Payment Confidence Guaranteed',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.bodySmall?.copyWith(
+                        color: successColor,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -190,7 +201,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: AppSpacing.paddingLg,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: AppSpacing.lg,
+                ),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
@@ -201,7 +215,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   ),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back_rounded, size: 24),
@@ -213,18 +226,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         }
                       },
                     ),
-                    Row(
-                      children: [
-                        Icon(Icons.shield_rounded,
-                            color: successColor, size: 20),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Secure Checkout',
-                          style: context.textStyles.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.shield_rounded,
+                              color: successColor, size: 20),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Secure Checkout',
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.textStyles.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.info_outline_rounded, size: 24),
@@ -234,8 +255,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
                   vertical: AppSpacing.sm,
                 ),
                 color: const Color(0xFFF0FDF4),
@@ -244,17 +265,21 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   children: [
                     Icon(Icons.lock_rounded, size: 14, color: successColor),
                     const SizedBox(width: 4),
-                    Text(
-                      'End-to-end encrypted payment',
-                      style: context.textStyles.labelMedium?.copyWith(
-                        color: successColor,
+                    Flexible(
+                      child: Text(
+                        'End-to-end encrypted payment',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.labelMedium?.copyWith(
+                          color: successColor,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               Padding(
-                padding: AppSpacing.paddingLg,
+                padding: EdgeInsets.all(horizontalPadding),
                 child: Container(
                   padding: AppSpacing.paddingMd,
                   decoration: BoxDecoration(
@@ -272,8 +297,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         borderRadius: BorderRadius.circular(AppRadius.lg),
                         child: Image(
                           image: imageProviderWithFallback(vehicle.imageUrl),
-                          width: 100,
-                          height: 70,
+                          width: isCompactPhone ? 84 : 100,
+                          height: isCompactPhone ? 62 : 70,
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -284,6 +309,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           children: [
                             Text(
                               vehicle.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: context.textStyles.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -305,7 +332,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 ),
               ),
               Padding(
-                padding: AppSpacing.horizontalLg,
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

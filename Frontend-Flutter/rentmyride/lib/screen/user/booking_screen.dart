@@ -74,6 +74,9 @@ class _BookingScreenState extends State<BookingScreen> {
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final successColor =
         isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
+    final sectionPadding = EdgeInsets.all(horizontalPadding);
     final bottomInset = MediaQuery.of(context).padding.bottom + 132;
 
     final range = _selectedRange!;
@@ -221,7 +224,12 @@ class _BookingScreenState extends State<BookingScreen> {
 
     return Scaffold(
       bottomNavigationBar: Container(
-        padding: AppSpacing.paddingLg,
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          AppSpacing.md,
+          horizontalPadding,
+          AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           color: surfaceColor,
           border: Border(
@@ -232,43 +240,81 @@ class _BookingScreenState extends State<BookingScreen> {
         ),
         child: SafeArea(
           top: false,
-          child: Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '\$${total.toStringAsFixed(2)}',
-                    style: context.textStyles.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: primaryColor,
+          child: isCompactPhone
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '\$${total.toStringAsFixed(2)}',
+                          style: context.textStyles.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: primaryColor,
+                          ),
+                        ),
+                        Text(
+                          'Total for $rentalDays day${rentalDays > 1 ? 's' : ''}',
+                          style: context.textStyles.labelSmall?.copyWith(
+                            color: isDark
+                                ? AppColors.darkSecondaryText
+                                : AppColors.lightSecondaryText,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    'Total for $rentalDays day${rentalDays > 1 ? 's' : ''}',
-                    style: context.textStyles.labelSmall?.copyWith(
-                      color: isDark
-                          ? AppColors.darkSecondaryText
-                          : AppColors.lightSecondaryText,
+                    const SizedBox(height: AppSpacing.sm),
+                    ElevatedButton.icon(
+                      onPressed: onProceedToPayment,
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                      label: const Text('Proceed to Payment'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 52),
+                      ),
+                      iconAlignment: IconAlignment.end,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: AppSpacing.lg),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onProceedToPayment,
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('Proceed to Payment'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 52),
-                  ),
-                  iconAlignment: IconAlignment.end,
+                  ],
+                )
+              : Row(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '\$${total.toStringAsFixed(2)}',
+                          style: context.textStyles.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: primaryColor,
+                          ),
+                        ),
+                        Text(
+                          'Total for $rentalDays day${rentalDays > 1 ? 's' : ''}',
+                          style: context.textStyles.labelSmall?.copyWith(
+                            color: isDark
+                                ? AppColors.darkSecondaryText
+                                : AppColors.lightSecondaryText,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: AppSpacing.lg),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onProceedToPayment,
+                        icon: const Icon(Icons.arrow_forward_rounded),
+                        label: const Text('Proceed to Payment'),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 52),
+                        ),
+                        iconAlignment: IconAlignment.end,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
         ),
       ),
       body: SafeArea(
@@ -278,7 +324,10 @@ class _BookingScreenState extends State<BookingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: AppSpacing.paddingLg,
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: AppSpacing.lg,
+                ),
                 decoration: BoxDecoration(
                   color: surfaceColor,
                   border: Border(
@@ -292,7 +341,6 @@ class _BookingScreenState extends State<BookingScreen> {
                 child: Column(
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_rounded, size: 24),
@@ -304,10 +352,15 @@ class _BookingScreenState extends State<BookingScreen> {
                             }
                           },
                         ),
-                        Text(
-                          'Review Booking',
-                          style: context.textStyles.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            'Review Booking',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -338,7 +391,7 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
               if (activeOrConfirmedBookings.isNotEmpty)
                 Padding(
-                  padding: AppSpacing.paddingLg,
+                  padding: sectionPadding,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -396,7 +449,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
               Padding(
-                padding: AppSpacing.paddingLg,
+                padding: sectionPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -455,33 +508,68 @@ class _BookingScreenState extends State<BookingScreen> {
                           setState(() => _dropLocation = value),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Insurance Plan',
-                          style: context.textStyles.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(AppRadius.full),
-                          ),
-                          child: Text(
-                            'RECOMMENDED',
-                            style: context.textStyles.labelSmall?.copyWith(
-                              color: successColor,
+                    if (isCompactPhone)
+                      Wrap(
+                        spacing: AppSpacing.sm,
+                        runSpacing: AppSpacing.xs,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            'Insurance Plan',
+                            style: context.textStyles.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.full,
+                              ),
+                            ),
+                            child: Text(
+                              'RECOMMENDED',
+                              style: context.textStyles.labelSmall?.copyWith(
+                                color: successColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Insurance Plan',
+                            style: context.textStyles.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.full,
+                              ),
+                            ),
+                            child: Text(
+                              'RECOMMENDED',
+                              style: context.textStyles.labelSmall?.copyWith(
+                                color: successColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     const SizedBox(height: AppSpacing.md),
                     InsuranceCard(
                       plan: 'Premium Protection',

@@ -117,11 +117,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final dividerColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
     final secondaryTextColor =
         isDark ? AppColors.darkSecondaryText : AppColors.lightSecondaryText;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
+    final roleChipSpacing = isCompactPhone ? AppSpacing.sm : AppSpacing.md;
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: AppSpacing.paddingLg,
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            AppSpacing.lg,
+            horizontalPadding,
+            AppSpacing.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -170,38 +178,45 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: RoleChip(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth < 340 ? 2 : 3;
+                  final itemWidth =
+                      (constraints.maxWidth - ((columns - 1) * roleChipSpacing)) /
+                      columns;
+
+                  final chips = [
+                    RoleChip(
                       label: 'USER',
                       icon: Icons.person_rounded,
                       desc: 'Rent vehicles',
                       isSelected: _selectedRole == UserRole.user,
                       onTap: () => setState(() => _selectedRole = UserRole.user),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: RoleChip(
+                    RoleChip(
                       label: 'OWNER',
                       icon: Icons.key_rounded,
                       desc: 'List vehicles',
                       isSelected: _selectedRole == UserRole.owner,
                       onTap: () => setState(() => _selectedRole = UserRole.owner),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: RoleChip(
+                    RoleChip(
                       label: 'ADMIN',
                       icon: Icons.admin_panel_settings_rounded,
                       desc: 'Manage all',
                       isSelected: _selectedRole == UserRole.admin,
                       onTap: () => setState(() => _selectedRole = UserRole.admin),
                     ),
-                  ),
-                ],
+                  ];
+
+                  return Wrap(
+                    spacing: roleChipSpacing,
+                    runSpacing: roleChipSpacing,
+                    children: chips
+                        .map((chip) => SizedBox(width: itemWidth, child: chip))
+                        .toList(),
+                  );
+                },
               ),
               const SizedBox(height: AppSpacing.lg),
 
@@ -318,30 +333,46 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: SocialButton(
-                      label: 'Google',
-                      surfaceColor: surfaceColor,
-                      dividerColor: dividerColor,
-                      onTap: _onGooglePressed,
+              if (isCompactPhone) ...[
+                SocialButton(
+                  label: 'Google',
+                  surfaceColor: surfaceColor,
+                  dividerColor: dividerColor,
+                  onTap: _onGooglePressed,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SocialButton(
+                  label: 'Apple',
+                  surfaceColor: surfaceColor,
+                  dividerColor: dividerColor,
+                  onTap: _onApplePressed,
+                ),
+              ] else
+                Row(
+                  children: [
+                    Expanded(
+                      child: SocialButton(
+                        label: 'Google',
+                        surfaceColor: surfaceColor,
+                        dividerColor: dividerColor,
+                        onTap: _onGooglePressed,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: SocialButton(
-                      label: 'Apple',
-                      surfaceColor: surfaceColor,
-                      dividerColor: dividerColor,
-                      onTap: _onApplePressed,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: SocialButton(
+                        label: 'Apple',
+                        surfaceColor: surfaceColor,
+                        dividerColor: dividerColor,
+                        onTap: _onApplePressed,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               const SizedBox(height: AppSpacing.lg),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(
                     _isSignUp

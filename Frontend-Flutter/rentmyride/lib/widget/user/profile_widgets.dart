@@ -196,6 +196,7 @@ class BookingHistoryCard extends StatelessWidget {
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final primaryColor =
         isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final isCompactPhone = context.isCompactPhone;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -207,54 +208,114 @@ class BookingHistoryCard extends StatelessWidget {
           color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Icon(Icons.receipt_long_rounded, color: primaryColor),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
+      child: isCompactPhone
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Icon(Icons.receipt_long_rounded, color: primaryColor),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        vehicleName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      amount,
+                      style: context.textStyles.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
-                  vehicleName,
-                  style: context.textStyles.labelLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  '$bookingId - $dateRange',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textStyles.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    status,
+                    style: context.textStyles.labelSmall?.copyWith(
+                      color: primaryColor,
+                    ),
                   ),
                 ),
-                Text(
-                  '$bookingId • $dateRange',
-                  style: context.textStyles.bodySmall,
+              ],
+            )
+          : Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Icon(Icons.receipt_long_rounded, color: primaryColor),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        vehicleName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '$bookingId - $dateRange',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      amount,
+                      style: context.textStyles.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      status,
+                      style: context.textStyles.labelSmall?.copyWith(
+                        color: primaryColor,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                amount,
-                style: context.textStyles.labelLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                status,
-                style: context.textStyles.labelSmall?.copyWith(
-                  color: primaryColor,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }
@@ -278,10 +339,14 @@ class FavoriteVehicleCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor =
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cardWidth = (screenWidth * 0.72).clamp(190.0, 260.0).toDouble();
+    final imageWidth = (cardWidth * 0.4).clamp(78.0, 102.0).toDouble();
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 220,
+        width: cardWidth,
         margin: const EdgeInsets.only(right: AppSpacing.sm),
         decoration: BoxDecoration(
           color: surfaceColor,
@@ -299,7 +364,7 @@ class FavoriteVehicleCard extends StatelessWidget {
               ),
               child: Image(
                 image: imageProviderWithFallback(imagePath),
-                width: 90,
+                width: imageWidth,
                 height: double.infinity,
                 fit: BoxFit.cover,
               ),
@@ -351,6 +416,27 @@ class PaymentMethodTile extends StatelessWidget {
         isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
     final surfaceColor =
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final isCompactPhone = context.isCompactPhone;
+
+    final actionChip = method.isDefault
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(AppRadius.full),
+            ),
+            child: Text(
+              'DEFAULT',
+              style: context.textStyles.labelSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          )
+        : TextButton(
+            onPressed: onSetDefault,
+            child: const Text('Default'),
+          );
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -364,61 +450,96 @@ class PaymentMethodTile extends StatelessWidget {
               : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
         ),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: primaryColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Icon(Icons.credit_card_rounded, color: primaryColor),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: isCompactPhone
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  '${method.brand} •••• ${method.last4}',
-                  style: context.textStyles.labelLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Icon(Icons.credit_card_rounded, color: primaryColor),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${method.brand} **** ${method.last4}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.labelLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${method.holderName} - Exp ${method.expiry}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline_rounded),
+                    ),
+                  ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: actionChip,
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: primaryColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Icon(Icons.credit_card_rounded, color: primaryColor),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${method.brand} **** ${method.last4}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${method.holderName} - Exp ${method.expiry}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.bodySmall,
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  '${method.holderName} • Exp ${method.expiry}',
-                  style: context.textStyles.bodySmall,
+                actionChip,
+                IconButton(
+                  onPressed: onDelete,
+                  icon: const Icon(Icons.delete_outline_rounded),
                 ),
               ],
             ),
-          ),
-          if (!method.isDefault)
-            TextButton(
-              onPressed: onSetDefault,
-              child: const Text('Default'),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: primaryColor,
-                borderRadius: BorderRadius.circular(AppRadius.full),
-              ),
-              child: Text(
-                'DEFAULT',
-                style: context.textStyles.labelSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          IconButton(
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline_rounded),
-          ),
-        ],
-      ),
     );
   }
 }
+

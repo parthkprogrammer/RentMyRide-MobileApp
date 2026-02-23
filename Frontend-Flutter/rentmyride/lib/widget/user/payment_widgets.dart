@@ -23,6 +23,9 @@ class PaymentMethodCard extends StatelessWidget {
     final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final backgroundColor =
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
+    final isCompactPhone = context.isCompactPhone;
+    final iconWidth = isCompactPhone ? 48.0 : 56.0;
+    final iconHeight = isCompactPhone ? 36.0 : 40.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -49,14 +52,14 @@ class PaymentMethodCard extends StatelessWidget {
                   ]
                   : [],
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 40,
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Row(
+            children: [
+              Container(
+                width: iconWidth,
+                height: iconHeight,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 border: Border.all(
                   color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
                 ),
@@ -65,19 +68,26 @@ class PaymentMethodCard extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: context.textStyles.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  Text(detail, style: context.textStyles.bodySmall),
-                ],
+                    Text(
+                      detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.bodySmall,
+                    ),
+                  ],
+                ),
               ),
-            ),
             Icon(
               isSelected
                   ? Icons.check_circle_rounded
@@ -109,15 +119,20 @@ class SummaryRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: context.textStyles.bodyMedium?.copyWith(
-              color:
-                  isDark
-                      ? AppColors.darkSecondaryText
-                      : AppColors.lightSecondaryText,
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.textStyles.bodyMedium?.copyWith(
+                color:
+                    isDark
+                        ? AppColors.darkSecondaryText
+                        : AppColors.lightSecondaryText,
+              ),
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
           Text(
             value,
             style: context.textStyles.bodyMedium?.copyWith(

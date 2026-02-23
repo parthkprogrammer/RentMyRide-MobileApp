@@ -495,10 +495,14 @@ class _UserDashboardState extends State<UserDashboard> {
       isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: StatefulBuilder(
-          builder: (sheetContext, setSheetState) => Padding(
-            padding: AppSpacing.paddingLg,
-            child: SingleChildScrollView(
-              child: Column(
+          builder: (sheetContext, setSheetState) {
+            final mapPreviewHeight = MediaQuery.of(sheetContext).size.width < 360
+                ? 130.0
+                : 160.0;
+            return Padding(
+              padding: AppSpacing.paddingLg,
+              child: SingleChildScrollView(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -513,7 +517,7 @@ class _UserDashboardState extends State<UserDashboard> {
                     borderRadius: BorderRadius.circular(AppRadius.lg),
                     child: Image.asset(
                       'assets/images/minimal_city_map_with_pin_null_1771667574634.png',
-                      height: 160,
+                      height: mapPreviewHeight,
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -546,8 +550,9 @@ class _UserDashboardState extends State<UserDashboard> {
                   ),
                 ],
               ),
-            ),
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -574,6 +579,17 @@ class _UserDashboardState extends State<UserDashboard> {
     final vehiclesForMap = _vehiclesForMap(vehicles);
     final visibleVehicles = _visibleVehicles(vehicles);
     final locationText = _locationFilter ?? 'All Locations';
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
+    final sectionPadding = EdgeInsets.symmetric(horizontal: horizontalPadding);
+    final topSectionPadding = EdgeInsets.symmetric(
+      horizontal: horizontalPadding,
+      vertical: AppSpacing.lg,
+    );
+    final actionSpacing = isCompactPhone ? AppSpacing.xs : AppSpacing.sm;
+    final filterButtonSize = isCompactPhone ? 46.0 : 52.0;
+    final heroHeight = isCompactPhone ? 146.0 : 160.0;
+    final vehicleListHeight = isCompactPhone ? 248.0 : 260.0;
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -583,7 +599,7 @@ class _UserDashboardState extends State<UserDashboard> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: AppSpacing.paddingLg,
+                padding: topSectionPadding,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -639,18 +655,18 @@ class _UserDashboardState extends State<UserDashboard> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
+                        SizedBox(width: actionSpacing),
                         DashboardActionButton(
                           icon: Icons.notifications_none_rounded,
                           badgeCount: unreadNotificationCount,
                           onTap: () => _showNotificationsSheet(context),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
+                        SizedBox(width: actionSpacing),
                         DashboardActionButton(
                           icon: Icons.person_outline_rounded,
                           onTap: () => _showProfileSheet(context),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
+                        SizedBox(width: actionSpacing),
                         DashboardActionButton(
                           icon: Icons.settings_rounded,
                           onTap: () => _showSettingsSheet(context),
@@ -711,8 +727,8 @@ class _UserDashboardState extends State<UserDashboard> {
                           borderRadius: BorderRadius.circular(AppRadius.lg),
                           onTap: () => _showFilterSheet(context),
                           child: Container(
-                            width: 52,
-                            height: 52,
+                            width: filterButtonSize,
+                            height: filterButtonSize,
                             decoration: BoxDecoration(
                               color: primaryColor,
                               borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -730,8 +746,8 @@ class _UserDashboardState extends State<UserDashboard> {
                 ),
               ),
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                height: 160,
+                margin: sectionPadding,
+                height: heroHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppRadius.xl),
                   gradient: const LinearGradient(
@@ -810,20 +826,27 @@ class _UserDashboardState extends State<UserDashboard> {
               ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding: sectionPadding,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Categories',
-                      style: context.textStyles.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        'Categories',
+                        style: context.textStyles.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    Text(
-                      'Showing: $_selectedCategory',
-                      style: context.textStyles.labelLarge?.copyWith(
-                        color: primaryColor,
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Text(
+                        'Showing: $_selectedCategory',
+                        textAlign: TextAlign.end,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.labelLarge?.copyWith(
+                          color: primaryColor,
+                        ),
                       ),
                     ),
                   ],
@@ -832,7 +855,7 @@ class _UserDashboardState extends State<UserDashboard> {
               const SizedBox(height: AppSpacing.md),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding: sectionPadding,
                 child: Row(
                   children: _categories
                       .map(
@@ -853,16 +876,19 @@ class _UserDashboardState extends State<UserDashboard> {
               ),
               const SizedBox(height: AppSpacing.lg),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding: sectionPadding,
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _selectedCategory == 'All'
-                          ? 'Featured Rides'
-                          : '$_selectedCategory Rides',
-                      style: context.textStyles.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        _selectedCategory == 'All'
+                            ? 'Featured Rides'
+                            : '$_selectedCategory Rides',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     TextButton(
@@ -880,8 +906,7 @@ class _UserDashboardState extends State<UserDashboard> {
               const SizedBox(height: AppSpacing.md),
               if (visibleVehicles.isEmpty)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: sectionPadding,
                   child: DashboardEmptyState(
                     title: 'No rides found',
                     subtitle: _selectedCategory == 'Bikes'
@@ -891,11 +916,10 @@ class _UserDashboardState extends State<UserDashboard> {
                 )
               else
                 SizedBox(
-                  height: 260,
+                  height: vehicleListHeight,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                    padding: sectionPadding,
                     itemCount: visibleVehicles.length,
                     itemBuilder: (context, index) => VehicleCard(
                       vehicle: visibleVehicles[index],

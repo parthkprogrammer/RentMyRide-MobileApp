@@ -22,11 +22,18 @@ class RoleChip extends StatelessWidget {
     final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
     final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final dividerColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
+    final isCompactPhone = context.isCompactPhone;
+    final iconSize = isCompactPhone ? 20.0 : 24.0;
+    final chipIconContainerSize = isCompactPhone ? 38.0 : 44.0;
+    final chipPadding = EdgeInsets.symmetric(
+      horizontal: isCompactPhone ? 10 : AppSpacing.md,
+      vertical: isCompactPhone ? 10 : AppSpacing.md,
+    );
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: AppSpacing.paddingMd,
+        padding: chipPadding,
         decoration: BoxDecoration(
           color: isSelected ? primaryColor : surfaceColor,
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -45,8 +52,8 @@ class RoleChip extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 44,
-              height: 44,
+              width: chipIconContainerSize,
+              height: chipIconContainerSize,
               decoration: BoxDecoration(
                 color:
                     isSelected
@@ -62,7 +69,7 @@ class RoleChip extends StatelessWidget {
                         : (isDark
                             ? AppColors.darkSecondaryText
                             : AppColors.lightSecondaryText),
-                size: 24,
+                size: iconSize,
               ),
             ),
             const SizedBox(height: 4),
@@ -87,10 +94,10 @@ class RoleChip extends StatelessWidget {
                         : (isDark
                             ? AppColors.darkSecondaryText
                             : AppColors.lightSecondaryText),
-                fontSize: 10,
+                fontSize: isCompactPhone ? 9 : 10,
               ),
               textAlign: TextAlign.center,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -116,6 +123,9 @@ class SocialButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCompactPhone = context.isCompactPhone;
+    final buttonHeight = isCompactPhone ? 50.0 : 56.0;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -126,7 +136,7 @@ class SocialButton extends StatelessWidget {
           alpha: 0.06,
         ),
         child: Container(
-          height: 56,
+          height: buttonHeight,
           decoration: BoxDecoration(
             color: surfaceColor,
             borderRadius: BorderRadius.circular(AppRadius.lg),

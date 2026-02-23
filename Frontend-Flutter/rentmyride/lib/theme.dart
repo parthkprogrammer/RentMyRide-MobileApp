@@ -40,6 +40,23 @@ extension TextStyleContext on BuildContext {
   TextTheme get textStyles => Theme.of(this).textTheme;
 }
 
+extension ResponsiveContext on BuildContext {
+  double get screenWidth => MediaQuery.sizeOf(this).width;
+
+  bool get isCompactPhone => screenWidth < 360;
+
+  bool get isSmallPhone => screenWidth < 400;
+
+  double responsiveValue(
+    double value, {
+    double minScale = 0.82,
+    double maxScale = 1.2,
+  }) {
+    final scale = (screenWidth / 390).clamp(minScale, maxScale);
+    return value * scale;
+  }
+}
+
 extension TextStyleExtensions on TextStyle {
   TextStyle get bold => copyWith(fontWeight: FontWeight.bold);
   TextStyle get semiBold => copyWith(fontWeight: FontWeight.w600);

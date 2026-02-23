@@ -346,27 +346,45 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor =
         isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isCompactPhone = context.isCompactPhone;
+    final horizontalPadding = isCompactPhone ? AppSpacing.md : AppSpacing.lg;
+    final mediaTileWidth =
+        ((screenWidth - (horizontalPadding * 2) - AppSpacing.md) / 2)
+            .clamp(116.0, 160.0)
+            .toDouble();
+    final mediaTileHeight = (mediaTileWidth * 0.7).toDouble();
+    final mapHeight = isCompactPhone ? 132.0 : 150.0;
 
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: AppSpacing.paddingLg,
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            AppSpacing.lg,
+            horizontalPadding,
+            AppSpacing.lg,
+          ),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back_rounded),
                       onPressed: () => context.pop(),
                     ),
-                    Text(
-                      'List Your Vehicle',
-                      style: context.textStyles.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                    Expanded(
+                      child: Text(
+                        'List Your Vehicle',
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 48),
@@ -434,8 +452,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                             child: Image(
                               image: imageProviderWithFallback(asset),
-                              width: 136,
-                              height: 96,
+                              width: mediaTileWidth,
+                              height: mediaTileHeight,
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -469,8 +487,8 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       onTap: _showImagePickerSheet,
                       child: Container(
-                        width: 136,
-                        height: 96,
+                        width: mediaTileWidth,
+                        height: mediaTileHeight,
                         decoration: BoxDecoration(
                           color: surfaceColor,
                           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -646,22 +664,42 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Pickup Location',
-                      style: context.textStyles.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                if (isCompactPhone)
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Pickup Location',
+                        style: context.textStyles.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => _showLocationPicker(locationOptions),
-                      icon: const Icon(Icons.location_on_rounded, size: 16),
-                      label: const Text('Change Location'),
-                    ),
-                  ],
-                ),
+                      TextButton.icon(
+                        onPressed: () => _showLocationPicker(locationOptions),
+                        icon: const Icon(Icons.location_on_rounded, size: 16),
+                        label: const Text('Change Location'),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Pickup Location',
+                        style: context.textStyles.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _showLocationPicker(locationOptions),
+                        icon: const Icon(Icons.location_on_rounded, size: 16),
+                        label: const Text('Change Location'),
+                      ),
+                    ],
+                  ),
                 Container(
                   padding: AppSpacing.paddingMd,
                   decoration: BoxDecoration(
@@ -680,7 +718,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   child: Image.asset(
                     'assets/images/minimal_city_map_with_pin_null_1771667574634.png',
-                    height: 150,
+                    height: mapHeight,
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
