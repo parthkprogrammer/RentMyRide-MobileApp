@@ -94,6 +94,116 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
+  Future<void> _openAdminNotifications() async {
+    final admin = context.read<UserService>().currentUser;
+    if (admin == null) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.82,
+          ),
+          child: Consumer<NotificationService>(
+            builder: (context, notificationService, _) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              final errorColor =
+                  isDark ? AppColors.darkError : AppColors.lightError;
+              final dividerColor =
+                  isDark ? AppColors.darkDivider : AppColors.lightDivider;
+              final notifications =
+                  notificationService.notificationsForUser(admin.id);
+
+              return SingleChildScrollView(
+                padding: AppSpacing.paddingLg,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Incoming Notifications',
+                          style: context.textStyles.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () =>
+                              notificationService.markAllRead(admin.id),
+                          child: const Text('Mark all read'),
+                        ),
+                      ],
+                    ),
+                    if (notifications.isEmpty)
+                      const ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.notifications_off_outlined),
+                        title: Text('No notifications'),
+                      )
+                    else
+                      ...notifications.map((entry) {
+                        final isEmergency =
+                            entry.type == AppNotificationType.emergency;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: isEmergency
+                                ? errorColor.withValues(alpha: 0.12)
+                                : null,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: isEmergency
+                                ? Border.all(
+                                    color: errorColor.withValues(alpha: 0.45),
+                                  )
+                                : Border.all(color: dividerColor),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            leading: Icon(
+                              isEmergency
+                                  ? Icons.notification_important_rounded
+                                  : (entry.isRead
+                                      ? Icons.notifications_none_rounded
+                                      : Icons.notifications_active_rounded),
+                              color: isEmergency ? errorColor : null,
+                            ),
+                            title: Text(entry.title),
+                            subtitle: Text(entry.message),
+                            trailing: isEmergency
+                                ? Text(
+                                    'EMERGENCY',
+                                    style:
+                                        context.textStyles.labelSmall?.copyWith(
+                                      color: errorColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : Text(
+                                    '${entry.createdAt.hour.toString().padLeft(2, '0')}:${entry.createdAt.minute.toString().padLeft(2, '0')}',
+                                  ),
+                            onTap: () => notificationService.markRead(
+                              userId: admin.id,
+                              notificationId: entry.id,
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _openBroadcastDialog() async {
     final audience = _notificationAudienceIds(context.read<UserService>());
     if (audience.isEmpty) {
@@ -321,9 +431,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
 
-    reasonController.dispose();
-    authorityController.dispose();
-    contactController.dispose();
   }
 
   Future<void> _approveSubmission(VehicleSubmissionModel submission) async {
@@ -390,7 +497,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       ),
     );
 
-    reasonController.dispose();
   }
 
   Future<void> _toggleFlag(UserModel user) async {
@@ -437,7 +543,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         ],
       ),
     );
-    reasonController.dispose();
   }
 
   Future<void> _downloadUserPdf(UserModel user) async {
@@ -464,7 +569,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final userService = context.watch<UserService>();
     final vehicleService = context.watch<VehicleService>();
     final adminService = context.watch<AdminService>();
+    final notificationService = context.watch<NotificationService>();
     final currentAdmin = userService.currentUser;
+    final unreadCount = currentAdmin == null
+        ? 0
+        : notificationService.unreadCountForUser(currentAdmin.id);
 
     final users = userService.users
         .where((entry) => entry.role != UserRole.admin)
@@ -489,6 +598,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
             entry.type.name,
           ]),
         )
+        .toList();
+    final vehicleReports = filteredReports
+        .where((entry) => entry.type == AdminReportType.vehicleByUser)
+        .toList();
+    final userReports = filteredReports
+        .where((entry) => entry.type == AdminReportType.userByOwner)
         .toList();
 
     final pendingSubmissions = vehicleService.pendingSubmissions
@@ -537,6 +652,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               ),
                             ],
                           ),
+                        ),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            IconButton(
+                              tooltip: 'Notifications',
+                              onPressed: _openAdminNotifications,
+                              icon: const Icon(Icons.notifications_none_rounded),
+                            ),
+                            if (unreadCount > 0)
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                    vertical: 1,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: errorColor,
+                                    borderRadius: BorderRadius.circular(
+                                      AppRadius.full,
+                                    ),
+                                  ),
+                                  constraints:
+                                      const BoxConstraints(minWidth: 16),
+                                  child: Text(
+                                    unreadCount > 9 ? '9+' : '$unreadCount',
+                                    textAlign: TextAlign.center,
+                                    style:
+                                        context.textStyles.labelSmall?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         IconButton(
                           tooltip: 'Emergency Notification',
@@ -631,31 +784,86 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       const SizedBox(height: AppSpacing.lg),
                     ],
                     if (_showSection('Reports')) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Reported Vehicles and Users',
-                            style: context.textStyles.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextButton.icon(
-                            onPressed: _openCreateReportDialog,
-                            icon: const Icon(Icons.add_rounded),
-                            label: const Text('Add Report'),
-                          ),
-                        ],
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 560;
+                          if (compact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Reported Vehicles and Users',
+                                  style: context.textStyles.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.xs),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: _openCreateReportDialog,
+                                    icon: const Icon(Icons.add_rounded),
+                                    label: const Text('Add Report'),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Reported Vehicles and Users',
+                                style: context.textStyles.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton.icon(
+                                onPressed: _openCreateReportDialog,
+                                icon: const Icon(Icons.add_rounded),
+                                label: const Text('Add Report'),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: AppSpacing.sm),
-                      if (filteredReports.isEmpty)
+                      Text(
+                        'Reported Vehicles',
+                        style: context.textStyles.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      if (vehicleReports.isEmpty)
                         const _AdminEmptyState(
-                          title: 'No reports found',
-                          subtitle:
-                              'New reports from users and owners appear here.',
+                          title: 'No vehicle reports',
+                          subtitle: 'Vehicle reports filed by users appear here.',
                         )
                       else
-                        ...filteredReports.map(
+                        ...vehicleReports.map(
+                          (report) => _ReportCard(
+                            report: report,
+                            onChangeStatus: (status) => context
+                                .read<AdminService>()
+                                .setReportStatus(report.id, status),
+                          ),
+                        ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Reported Users',
+                        style: context.textStyles.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      if (userReports.isEmpty)
+                        const _AdminEmptyState(
+                          title: 'No user reports',
+                          subtitle: 'Damage and user case reports appear here.',
+                        )
+                      else
+                        ...userReports.map(
                           (report) => _ReportCard(
                             report: report,
                             onChangeStatus: (status) => context
@@ -989,29 +1197,35 @@ class _ReportCard extends StatelessWidget {
                   style: context.textStyles.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
-                ),
-              ),
-              PopupMenuButton<AdminReportStatus>(
-                onSelected: onChangeStatus,
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: AdminReportStatus.open,
-                    child: Text('Set Open'),
-                  ),
-                  PopupMenuItem(
-                    value: AdminReportStatus.investigating,
-                    child: Text('Set Investigating'),
-                  ),
-                  PopupMenuItem(
-                    value: AdminReportStatus.resolved,
-                    child: Text('Set Resolved'),
-                  ),
-                ],
-                child: Chip(
-                  label: Text(report.status.name.toUpperCase()),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Align(
+            alignment: Alignment.centerRight,
+            child: PopupMenuButton<AdminReportStatus>(
+              onSelected: onChangeStatus,
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: AdminReportStatus.open,
+                  child: Text('Set Open'),
+                ),
+                PopupMenuItem(
+                  value: AdminReportStatus.investigating,
+                  child: Text('Set Investigating'),
+                ),
+                PopupMenuItem(
+                  value: AdminReportStatus.resolved,
+                  child: Text('Set Resolved'),
+                ),
+              ],
+              child: Chip(
+                label: Text(report.status.name.toUpperCase()),
+              ),
+            ),
           ),
           const SizedBox(height: 4),
           Text(

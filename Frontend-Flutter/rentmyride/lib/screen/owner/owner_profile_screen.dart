@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:rentmyride/service/theme_service.dart';
 import 'package:rentmyride/service/user_service.dart';
 import 'package:rentmyride/theme.dart';
 
@@ -10,6 +11,7 @@ class OwnerProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final userService = context.watch<UserService>();
+    final themeService = context.watch<ThemeService>();
     final owner = userService.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
@@ -111,43 +113,120 @@ class OwnerProfileScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           OutlinedButton.icon(
             onPressed: () async {
-              final controller = TextEditingController(
-                text: userService.ownerBankAccount(owner.id),
-              );
-              await showDialog<void>(
+              final accountValue = await showDialog<String>(
                 context: context,
-                builder: (dialogContext) => AlertDialog(
-                  title: const Text('Update Bank Account'),
-                  content: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      labelText: 'Account / UPI / IBAN',
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogContext),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        await context
-                            .read<UserService>()
-                            .setOwnerBankAccount(owner.id, controller.text);
-                        if (dialogContext.mounted) Navigator.pop(dialogContext);
-                      },
-                      child: const Text('Save'),
-                    ),
-                  ],
+                builder: (_) => _OwnerBankAccountDialog(
+                  initialValue: userService.ownerBankAccount(owner.id),
                 ),
               );
-              controller.dispose();
+              if (!context.mounted || accountValue == null) return;
+              await context
+                  .read<UserService>()
+                  .setOwnerBankAccount(owner.id, accountValue);
             },
             icon: const Icon(Icons.add_card_rounded),
             label: const Text('Add / Update Bank Account'),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'Settings',
+            style: context.textStyles.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Container(
+            padding: AppSpacing.paddingMd,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.dark_mode_rounded, color: primaryColor),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Dark Mode (Owner)',
+                    style: context.textStyles.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: themeService.isDarkModeForRole('owner'),
+                  onChanged: (enabled) => context
+                      .read<ThemeService>()
+                      .toggleDarkModeForRole('owner', enabled),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          ElevatedButton.icon(
+            onPressed: () async {
+              await context.read<UserService>().logout();
+              if (!context.mounted) return;
+              context.go('/');
+            },
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Logout'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isDark ? AppColors.darkError : AppColors.lightError,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _OwnerBankAccountDialog extends StatefulWidget {
+  final String initialValue;
+
+  const _OwnerBankAccountDialog({required this.initialValue});
+
+  @override
+  State<_OwnerBankAccountDialog> createState() => _OwnerBankAccountDialogState();
+}
+
+class _OwnerBankAccountDialogState extends State<_OwnerBankAccountDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Update Bank Account'),
+      content: TextField(
+        controller: _controller,
+        decoration: const InputDecoration(labelText: 'Account / UPI / IBAN'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

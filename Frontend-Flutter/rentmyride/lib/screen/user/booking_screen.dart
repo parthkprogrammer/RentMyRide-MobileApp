@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:rentmyride/model/booking_draft_model.dart';
+import 'package:rentmyride/model/booking_model.dart';
 import 'package:rentmyride/service/booking_service.dart';
 import 'package:rentmyride/service/user_service.dart';
 import 'package:rentmyride/service/vehicle_service.dart';
@@ -50,6 +51,8 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bookingService = context.watch<BookingService>();
+    final sessionUser = context.watch<UserService>().currentUser;
     final vehicleService = context.watch<VehicleService>();
     final vehicle = vehicleService.getVehicleById(widget.vehicleId);
     if (vehicle == null) {
@@ -83,10 +86,20 @@ class _BookingScreenState extends State<BookingScreen> {
     final total = rentalFee + insuranceFee + serviceFee + taxes;
     final dateLabel =
         '${DateFormat('dd MMM yyyy').format(range.start)} - ${DateFormat('dd MMM yyyy').format(range.end)}';
+    final activeOrConfirmedBookings = sessionUser == null
+        ? const <BookingModel>[]
+        : bookingService
+            .getBookingsByUser(sessionUser.id)
+            .where(
+              (booking) =>
+                  booking.status == BookingStatus.confirmed ||
+                  booking.status == BookingStatus.active,
+            )
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     Future<void> onProceedToPayment() async {
-      final currentUser = context.read<UserService>().currentUser;
-      final bookingService = context.read<BookingService>();
+      final currentUser = sessionUser;
       if (currentUser == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please login again to continue')),
@@ -113,23 +126,23 @@ class _BookingScreenState extends State<BookingScreen> {
                   children: [
                     Text(
                       'Proceed to Payment',
-                      style: context.textStyles.titleLarge?.copyWith(
+                      style: sheetContext.textStyles.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       '$rentalDays day${rentalDays > 1 ? 's' : ''} - ${vehicle.name}',
-                      style: context.textStyles.bodyMedium,
+                      style: sheetContext.textStyles.bodyMedium,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Pickup: $_pickupLocation',
-                      style: context.textStyles.bodySmall,
+                      style: sheetContext.textStyles.bodySmall,
                     ),
                     Text(
                       'Drop: $_dropLocation',
-                      style: context.textStyles.bodySmall,
+                      style: sheetContext.textStyles.bodySmall,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     Container(
@@ -148,13 +161,13 @@ class _BookingScreenState extends State<BookingScreen> {
                         children: [
                           Text(
                             'Total',
-                            style: context.textStyles.titleMedium?.copyWith(
+                            style: sheetContext.textStyles.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           Text(
                             '\$${total.toStringAsFixed(2)}',
-                            style: context.textStyles.titleMedium?.copyWith(
+                            style: sheetContext.textStyles.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: primaryColor,
                             ),
@@ -323,6 +336,65 @@ class _BookingScreenState extends State<BookingScreen> {
                   ],
                 ),
               ),
+              if (activeOrConfirmedBookings.isNotEmpty)
+                Padding(
+                  padding: AppSpacing.paddingLg,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'My Bookings (Confirmed & Active)',
+                        style: context.textStyles.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ...activeOrConfirmedBookings.take(3).map(
+                            (booking) => Container(
+                              margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                              decoration: BoxDecoration(
+                                color: surfaceColor,
+                                borderRadius: BorderRadius.circular(AppRadius.md),
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.darkDivider
+                                      : AppColors.lightDivider,
+                                ),
+                              ),
+                              child: ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.md,
+                                  vertical: AppSpacing.xs,
+                                ),
+                                leading: const Icon(Icons.event_available_rounded),
+                                title: Text(
+                                  vehicleService
+                                          .getVehicleById(booking.vehicleId)
+                                          ?.name ??
+                                      'Vehicle',
+                                ),
+                                subtitle: Text(
+                                  '${DateFormat('dd MMM').format(booking.pickupDate)} - ${DateFormat('dd MMM yyyy').format(booking.returnDate)}',
+                                ),
+                                trailing: Text(
+                                  booking.status.name.toUpperCase(),
+                                  style: context.textStyles.labelSmall?.copyWith(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                onTap: booking.vehicleId == widget.vehicleId
+                                    ? null
+                                    : () => context.push(
+                                          '/booking/${booking.vehicleId}',
+                                        ),
+                              ),
+                            ),
+                          ),
+                    ],
+                  ),
+                ),
               Padding(
                 padding: AppSpacing.paddingLg,
                 child: Column(

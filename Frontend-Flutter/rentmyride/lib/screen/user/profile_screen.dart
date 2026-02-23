@@ -267,9 +267,6 @@ class ProfileScreen extends StatelessWidget {
           );
         },
       );
-      holderController.dispose();
-      last4Controller.dispose();
-      expiryController.dispose();
     }
 
     Future<void> openProfilePhotoSheet() async {
@@ -772,10 +769,10 @@ class ProfileScreen extends StatelessWidget {
                             ),
                           ),
                           Switch(
-                            value: themeService.isDarkMode,
+                            value: themeService.isDarkModeForRole('user'),
                             onChanged: (enabled) => context
                                 .read<ThemeService>()
-                                .toggleDarkMode(enabled),
+                                .toggleDarkModeForRole('user', enabled),
                             activeThumbColor: primaryColor,
                           ),
                         ],

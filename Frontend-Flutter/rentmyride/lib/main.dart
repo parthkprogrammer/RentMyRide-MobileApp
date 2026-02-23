@@ -67,15 +67,19 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: notificationService),
         ChangeNotifierProvider.value(value: adminService),
       ],
-      child: Consumer<ThemeService>(
-        builder: (context, themeService, _) => MaterialApp.router(
-          title: 'RentMyRide',
-          debugShowCheckedModeBanner: false,
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          themeMode: themeService.themeMode,
-          routerConfig: AppRouter.router,
-        ),
+      child: Consumer2<ThemeService, UserService>(
+        builder: (context, themeService, userService, _) {
+          final roleKey = userService.currentUser?.role.name ?? 'user';
+          themeService.setActiveRole(roleKey);
+          return MaterialApp.router(
+            title: 'RentMyRide',
+            debugShowCheckedModeBanner: false,
+            theme: lightTheme,
+            darkTheme: darkTheme,
+            themeMode: themeService.themeModeForRole(roleKey),
+            routerConfig: AppRouter.router,
+          );
+        },
       ),
     );
   }

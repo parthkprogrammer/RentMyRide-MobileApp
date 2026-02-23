@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:rentmyride/model/app_notification_model.dart';
+import 'package:rentmyride/model/booking_model.dart';
 import 'package:rentmyride/model/vehicle_model.dart';
+import 'package:rentmyride/service/booking_service.dart';
 import 'package:rentmyride/service/notification_service.dart';
 import 'package:rentmyride/service/user_service.dart';
 import 'package:rentmyride/service/vehicle_service.dart';
@@ -124,64 +127,106 @@ class _UserDashboardState extends State<UserDashboard> {
   void _showNotificationsSheet(BuildContext context) {
     final user = context.read<UserService>().currentUser;
     if (user == null) return;
-    final notificationService = context.read<NotificationService>();
-    final notifications = notificationService.notificationsForUser(user.id);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final errorColor = isDark ? AppColors.darkError : AppColors.lightError;
+    final dividerColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: AppSpacing.paddingLg,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Notifications',
-                    style: context.textStyles.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
+          ),
+          child: Consumer<NotificationService>(
+            builder: (context, notificationService, _) {
+              final notifications =
+                  notificationService.notificationsForUser(user.id);
+              return SingleChildScrollView(
+                padding: AppSpacing.paddingLg,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Notifications',
+                          style: sheetContext.textStyles.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: () async =>
+                              notificationService.markAllRead(user.id),
+                          child: const Text('Mark all read'),
+                        ),
+                      ],
                     ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () async =>
-                        notificationService.markAllRead(user.id),
-                    child: const Text('Mark all read'),
-                  ),
-                ],
-              ),
-              if (notifications.isEmpty)
-                const ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.notifications_off_outlined),
-                  title: Text('No notifications'),
-                  subtitle:
-                      Text('Broadcasts and booking updates will appear here.'),
-                )
-              else
-                ...notifications.map(
-                  (item) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      item.isRead
-                          ? Icons.notifications_none_rounded
-                          : Icons.notifications_active_rounded,
-                    ),
-                    title: Text(item.title),
-                    subtitle: Text(item.message),
-                    trailing: Text(
-                      '${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
-                    ),
-                    onTap: () => notificationService.markRead(
-                      userId: user.id,
-                      notificationId: item.id,
-                    ),
-                  ),
+                    if (notifications.isEmpty)
+                      const ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.notifications_off_outlined),
+                        title: Text('No notifications'),
+                        subtitle:
+                            Text('Broadcasts and booking updates will appear here.'),
+                      )
+                    else
+                      ...notifications.map((item) {
+                        final isEmergency =
+                            item.type == AppNotificationType.emergency;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                          decoration: BoxDecoration(
+                            color: isEmergency
+                                ? errorColor.withValues(alpha: 0.1)
+                                : null,
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            border: isEmergency
+                                ? Border.all(
+                                    color: errorColor.withValues(alpha: 0.45),
+                                  )
+                                : Border.all(color: dividerColor),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                            ),
+                            leading: Icon(
+                              isEmergency
+                                  ? Icons.warning_amber_rounded
+                                  : (item.isRead
+                                      ? Icons.notifications_none_rounded
+                                      : Icons.notifications_active_rounded),
+                              color: isEmergency ? errorColor : null,
+                            ),
+                            title: Text(item.title),
+                            subtitle: Text(item.message),
+                            trailing: isEmergency
+                                ? Text(
+                                    'ALERT',
+                                    style:
+                                        sheetContext.textStyles.labelSmall?.copyWith(
+                                      color: errorColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : Text(
+                                    '${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
+                                  ),
+                            onTap: () => notificationService.markRead(
+                              userId: user.id,
+                              notificationId: item.id,
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
                 ),
-            ],
+              );
+            },
           ),
         ),
       ),
@@ -210,7 +255,7 @@ class _UserDashboardState extends State<UserDashboard> {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 user?.name ?? 'Guest User',
-                style: context.textStyles.titleMedium?.copyWith(
+                style: sheetContext.textStyles.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -221,7 +266,8 @@ class _UserDashboardState extends State<UserDashboard> {
                 title: const Text('Open Profile'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  context.push('/profile');
+                  if (!mounted) return;
+                  this.context.push('/profile');
                 },
               ),
               ListTile(
@@ -229,11 +275,31 @@ class _UserDashboardState extends State<UserDashboard> {
                 title: const Text('My Bookings'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Bookings section will open here.'),
-                    ),
-                  );
+                  if (!mounted) return;
+                  final currentUser = this.context.read<UserService>().currentUser;
+                  if (currentUser == null) return;
+                  final activeOrConfirmed = this
+                      .context
+                      .read<BookingService>()
+                      .getBookingsByUser(currentUser.id)
+                      .where(
+                        (booking) =>
+                            booking.status == BookingStatus.confirmed ||
+                            booking.status == BookingStatus.active,
+                      )
+                      .toList()
+                    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                  final vehicles = this.context.read<VehicleService>().vehicles;
+                  final targetVehicleId = activeOrConfirmed.isNotEmpty
+                      ? activeOrConfirmed.first.vehicleId
+                      : (vehicles.isNotEmpty ? vehicles.first.id : null);
+                  if (targetVehicleId == null) {
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(content: Text('No vehicles available')),
+                    );
+                    return;
+                  }
+                  this.context.push('/booking/$targetVehicleId');
                 },
               ),
               ListTile(
@@ -241,8 +307,9 @@ class _UserDashboardState extends State<UserDashboard> {
                 title: const Text('Logout'),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  context.read<UserService>().logout();
-                  context.go('/');
+                  if (!mounted) return;
+                  this.context.read<UserService>().logout();
+                  this.context.go('/');
                 },
               ),
             ],
@@ -267,13 +334,14 @@ class _UserDashboardState extends State<UserDashboard> {
                   children: [
                     Text(
                       'Quick Settings',
-                      style: context.textStyles.titleLarge?.copyWith(
+                      style: sheetContext.textStyles.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const Spacer(),
                     TextButton(
                       onPressed: () {
+                        if (!mounted) return;
                         setState(() {
                           _selectedCategory = 'All';
                           _selectedSort = 'Recommended';
@@ -293,6 +361,7 @@ class _UserDashboardState extends State<UserDashboard> {
                   value: _availableOnly,
                   title: const Text('Show available only'),
                   onChanged: (value) {
+                    if (!mounted) return;
                     setState(() => _availableOnly = value);
                     setSheetState(() {});
                   },
@@ -304,7 +373,8 @@ class _UserDashboardState extends State<UserDashboard> {
                   subtitle: Text(_selectedSort),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
-                    _showFilterSheet(context);
+                    if (!mounted) return;
+                    _showFilterSheet(this.context);
                   },
                 ),
               ],
@@ -339,13 +409,14 @@ class _UserDashboardState extends State<UserDashboard> {
                   children: [
                     Text(
                       'Filter & Sort',
-                      style: context.textStyles.titleLarge?.copyWith(
+                      style: sheetContext.textStyles.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const Spacer(),
                     TextButton(
                       onPressed: () {
+                        if (!mounted) return;
                         setState(() {
                           _selectedSort = 'Recommended';
                           _availableOnly = false;
@@ -361,6 +432,7 @@ class _UserDashboardState extends State<UserDashboard> {
                   value: _availableOnly,
                   title: const Text('Available only'),
                   onChanged: (value) {
+                    if (!mounted) return;
                     setState(() => _availableOnly = value);
                     setSheetState(() {});
                   },
@@ -370,7 +442,7 @@ class _UserDashboardState extends State<UserDashboard> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Sort by',
-                    style: context.textStyles.titleSmall?.copyWith(
+                    style: sheetContext.textStyles.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -395,6 +467,7 @@ class _UserDashboardState extends State<UserDashboard> {
                       .toList(),
                   onChanged: (value) {
                     if (value == null) return;
+                    if (!mounted) return;
                     setState(() => _selectedSort = value);
                     setSheetState(() {});
                   },
@@ -431,7 +504,7 @@ class _UserDashboardState extends State<UserDashboard> {
                 children: [
                   Text(
                     'Ride Locations',
-                    style: context.textStyles.titleLarge?.copyWith(
+                    style: sheetContext.textStyles.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -453,6 +526,7 @@ class _UserDashboardState extends State<UserDashboard> {
                         label: Text('All (${vehiclesForMap.length})'),
                         selected: _locationFilter == null,
                         onSelected: (_) {
+                          if (!mounted) return;
                           setState(() => _locationFilter = null);
                           setSheetState(() {});
                         },
@@ -462,6 +536,7 @@ class _UserDashboardState extends State<UserDashboard> {
                           label: Text('$location (${locations[location]})'),
                           selected: _locationFilter == location,
                           onSelected: (_) {
+                            if (!mounted) return;
                             setState(() => _locationFilter = location);
                             setSheetState(() {});
                           },

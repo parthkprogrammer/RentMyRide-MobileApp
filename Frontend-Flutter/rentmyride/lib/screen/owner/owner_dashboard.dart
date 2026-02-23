@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:rentmyride/model/app_notification_model.dart';
 import 'package:rentmyride/model/booking_model.dart';
 import 'package:rentmyride/service/admin_service.dart';
 import 'package:rentmyride/service/booking_service.dart';
@@ -45,56 +46,100 @@ class OwnerDashboard extends StatelessWidget {
         .where((booking) => booking.status != BookingStatus.cancelled)
         .fold<double>(0, (sum, booking) => sum + booking.totalAmount);
     final unreadCount = notificationService.unreadCountForUser(owner.id);
+    final errorColor = isDark ? AppColors.darkError : AppColors.lightError;
+    final dividerColor = isDark ? AppColors.darkDivider : AppColors.lightDivider;
 
     Future<void> showOwnerNotifications() async {
-      final notifications = notificationService.notificationsForUser(owner.id);
       await showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
         builder: (sheetContext) => SafeArea(
-          child: Padding(
-            padding: AppSpacing.paddingLg,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Notifications',
-                      style: context.textStyles.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
+            ),
+            child: Consumer<NotificationService>(
+              builder: (context, notificationService, _) {
+                final notifications =
+                    notificationService.notificationsForUser(owner.id);
+                return SingleChildScrollView(
+                  padding: AppSpacing.paddingLg,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Notifications',
+                            style: sheetContext.textStyles.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () =>
+                                notificationService.markAllRead(owner.id),
+                            child: const Text('Mark all read'),
+                          ),
+                        ],
                       ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => notificationService.markAllRead(owner.id),
-                      child: const Text('Mark all read'),
-                    ),
-                  ],
-                ),
-                if (notifications.isEmpty)
-                  const ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('No notifications'),
-                  )
-                else
-                  ...notifications.map(
-                    (entry) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        entry.isRead
-                            ? Icons.notifications_none_rounded
-                            : Icons.notifications_active_rounded,
-                      ),
-                      title: Text(entry.title),
-                      subtitle: Text(entry.message),
-                      onTap: () => notificationService.markRead(
-                        userId: owner.id,
-                        notificationId: entry.id,
-                      ),
-                    ),
+                      if (notifications.isEmpty)
+                        const ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text('No notifications'),
+                        )
+                      else
+                        ...notifications.map((entry) {
+                          final isEmergency =
+                              entry.type == AppNotificationType.emergency;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                            decoration: BoxDecoration(
+                              color: isEmergency
+                                  ? errorColor.withValues(alpha: 0.1)
+                                  : null,
+                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              border: isEmergency
+                                  ? Border.all(
+                                      color: errorColor.withValues(alpha: 0.45),
+                                    )
+                                  : Border.all(color: dividerColor),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                              ),
+                              leading: Icon(
+                                isEmergency
+                                    ? Icons.warning_amber_rounded
+                                    : (entry.isRead
+                                        ? Icons.notifications_none_rounded
+                                        : Icons.notifications_active_rounded),
+                                color: isEmergency ? errorColor : null,
+                              ),
+                              title: Text(entry.title),
+                              subtitle: Text(entry.message),
+                              trailing: isEmergency
+                                  ? Text(
+                                      'ALERT',
+                                      style: sheetContext.textStyles.labelSmall
+                                          ?.copyWith(
+                                        color: errorColor,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
+                              onTap: () => notificationService.markRead(
+                                userId: owner.id,
+                                notificationId: entry.id,
+                              ),
+                            ),
+                          );
+                        }),
+                    ],
                   ),
-              ],
+                );
+              },
             ),
           ),
         ),
@@ -102,33 +147,14 @@ class OwnerDashboard extends StatelessWidget {
     }
 
     Future<void> addBankAccount() async {
-      final controller = TextEditingController(text: userService.ownerBankAccount(owner.id));
-      await showDialog<void>(
+      final accountValue = await showDialog<String>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Add Bank Account'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(labelText: 'Account / UPI / IBAN'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await context
-                    .read<UserService>()
-                    .setOwnerBankAccount(owner.id, controller.text);
-                if (dialogContext.mounted) Navigator.pop(dialogContext);
-              },
-              child: const Text('Save'),
-            ),
-          ],
+        builder: (_) => _OwnerBankAccountDialog(
+          initialValue: userService.ownerBankAccount(owner.id),
         ),
       );
-      controller.dispose();
+      if (!context.mounted || accountValue == null) return;
+      await context.read<UserService>().setOwnerBankAccount(owner.id, accountValue);
     }
 
     Future<void> reportUserFromBooking(BookingModel booking) async {
@@ -179,7 +205,7 @@ class OwnerDashboard extends StatelessWidget {
             ElevatedButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
-                await context.read<AdminService>().addUserReport(
+                await dialogContext.read<AdminService>().addUserReport(
                       reportedById: owner.id,
                       reportedByName: owner.name,
                       userId: booking.userId,
@@ -202,9 +228,6 @@ class OwnerDashboard extends StatelessWidget {
         ),
       );
 
-      reasonController.dispose();
-      authorityController.dispose();
-      contactController.dispose();
     }
 
     Future<void> showQuickReports() async {
@@ -220,7 +243,7 @@ class OwnerDashboard extends StatelessWidget {
               children: [
                 Text(
                   'My Reports',
-                  style: context.textStyles.titleLarge?.copyWith(
+                  style: sheetContext.textStyles.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -254,7 +277,7 @@ class OwnerDashboard extends StatelessWidget {
               children: [
                 Text(
                   'Upcoming Schedule',
-                  style: context.textStyles.titleLarge?.copyWith(
+                  style: sheetContext.textStyles.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -285,7 +308,7 @@ class OwnerDashboard extends StatelessWidget {
         context: context,
         showDragHandle: true,
         builder: (sheetContext) => StatefulBuilder(
-          builder: (context, setSheetState) => SafeArea(
+          builder: (innerContext, setSheetState) => SafeArea(
             child: Padding(
               padding: AppSpacing.paddingLg,
               child: Column(
@@ -293,7 +316,7 @@ class OwnerDashboard extends StatelessWidget {
                 children: [
                   Text(
                     'Owner Settings',
-                    style: context.textStyles.titleLarge?.copyWith(
+                    style: innerContext.textStyles.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -575,6 +598,52 @@ class OwnerDashboard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OwnerBankAccountDialog extends StatefulWidget {
+  final String initialValue;
+
+  const _OwnerBankAccountDialog({required this.initialValue});
+
+  @override
+  State<_OwnerBankAccountDialog> createState() => _OwnerBankAccountDialogState();
+}
+
+class _OwnerBankAccountDialogState extends State<_OwnerBankAccountDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Bank Account'),
+      content: TextField(
+        controller: _controller,
+        decoration: const InputDecoration(labelText: 'Account / UPI / IBAN'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

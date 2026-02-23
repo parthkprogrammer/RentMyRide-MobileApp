@@ -207,14 +207,17 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 ...options.map(
-                  (location) => RadioListTile<String>(
-                    value: location,
-                    groupValue: selectedLocation,
+                  (location) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      selectedLocation == location
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                    ),
                     title: Text(location),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setSheetState(() => selectedLocation = value);
-                    },
+                    onTap: () => setSheetState(
+                      () => selectedLocation = location,
+                    ),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
@@ -246,7 +249,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
         ),
       ),
     );
-    customLocationController.dispose();
   }
 
   void _saveDraft() {
