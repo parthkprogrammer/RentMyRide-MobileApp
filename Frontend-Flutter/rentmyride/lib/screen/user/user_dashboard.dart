@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:rentmyride/model/vehicle_model.dart';
+import 'package:rentmyride/service/notification_service.dart';
 import 'package:rentmyride/service/user_service.dart';
 import 'package:rentmyride/service/vehicle_service.dart';
 import 'package:rentmyride/theme.dart';
+import 'package:rentmyride/utils/image_source_resolver.dart';
 
 part '../../widget/user/user_dashboard_widgets.dart';
 
@@ -39,7 +41,6 @@ class _UserDashboardState extends State<UserDashboard> {
   String _searchQuery = '';
   bool _availableOnly = false;
   String? _locationFilter;
-  int _unreadNotificationCount = 3;
 
   @override
   void dispose() {
@@ -120,26 +121,11 @@ class _UserDashboardState extends State<UserDashboard> {
     return filtered;
   }
 
-  void _showNotificationsSheet(BuildContext context, int visibleCount) {
-    final notifications = <Map<String, String>>[
-      {
-        'title': '$visibleCount rides match your filters',
-        'subtitle': _selectedCategory == 'All'
-            ? 'Showing all categories'
-            : 'Category: $_selectedCategory',
-      },
-      {
-        'title':
-            _locationFilter == null ? 'All locations active' : _locationFilter!,
-        'subtitle': 'Tap View Map to change ride location',
-      },
-      {
-        'title': _searchQuery.isEmpty
-            ? 'Search is ready'
-            : 'Search: "${_searchQuery.trim()}"',
-        'subtitle': 'Use search to find specific vehicles faster',
-      },
-    ];
+  void _showNotificationsSheet(BuildContext context) {
+    final user = context.read<UserService>().currentUser;
+    if (user == null) return;
+    final notificationService = context.read<NotificationService>();
+    final notifications = notificationService.notificationsForUser(user.id);
 
     showModalBottomSheet<void>(
       context: context,
@@ -161,22 +147,40 @@ class _UserDashboardState extends State<UserDashboard> {
                   ),
                   const Spacer(),
                   TextButton(
-                    onPressed: () {
-                      setState(() => _unreadNotificationCount = 0);
-                      Navigator.of(sheetContext).pop();
-                    },
+                    onPressed: () async =>
+                        notificationService.markAllRead(user.id),
                     child: const Text('Mark all read'),
                   ),
                 ],
               ),
-              ...notifications.map(
-                (item) => ListTile(
+              if (notifications.isEmpty)
+                const ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.notifications_active_rounded),
-                  title: Text(item['title']!),
-                  subtitle: Text(item['subtitle']!),
+                  leading: Icon(Icons.notifications_off_outlined),
+                  title: Text('No notifications'),
+                  subtitle:
+                      Text('Broadcasts and booking updates will appear here.'),
+                )
+              else
+                ...notifications.map(
+                  (item) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      item.isRead
+                          ? Icons.notifications_none_rounded
+                          : Icons.notifications_active_rounded,
+                    ),
+                    title: Text(item.title),
+                    subtitle: Text(item.message),
+                    trailing: Text(
+                      '${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}',
+                    ),
+                    onTap: () => notificationService.markRead(
+                      userId: user.id,
+                      notificationId: item.id,
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -486,6 +490,12 @@ class _UserDashboardState extends State<UserDashboard> {
     final hintColor = isDark ? AppColors.darkHint : AppColors.lightHint;
 
     final vehicles = context.watch<VehicleService>().vehicles;
+    final currentUser = context.watch<UserService>().currentUser;
+    final unreadNotificationCount = currentUser == null
+        ? 0
+        : context
+            .watch<NotificationService>()
+            .unreadCountForUser(currentUser.id);
     final vehiclesForMap = _vehiclesForMap(vehicles);
     final visibleVehicles = _visibleVehicles(vehicles);
     final locationText = _locationFilter ?? 'All Locations';
@@ -557,11 +567,8 @@ class _UserDashboardState extends State<UserDashboard> {
                         const SizedBox(width: AppSpacing.sm),
                         DashboardActionButton(
                           icon: Icons.notifications_none_rounded,
-                          badgeCount: _unreadNotificationCount,
-                          onTap: () => _showNotificationsSheet(
-                            context,
-                            visibleVehicles.length,
-                          ),
+                          badgeCount: unreadNotificationCount,
+                          onTap: () => _showNotificationsSheet(context),
                         ),
                         const SizedBox(width: AppSpacing.sm),
                         DashboardActionButton(

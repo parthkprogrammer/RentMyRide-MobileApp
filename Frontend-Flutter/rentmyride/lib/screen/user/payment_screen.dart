@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:rentmyride/model/booking_model.dart';
+import 'package:rentmyride/service/booking_service.dart';
+import 'package:rentmyride/service/notification_service.dart';
+import 'package:rentmyride/service/user_service.dart';
 import 'package:rentmyride/service/vehicle_service.dart';
 import 'package:rentmyride/theme.dart';
+import 'package:rentmyride/utils/image_source_resolver.dart';
 
 part '../../widget/user/payment_widgets.dart';
 
@@ -16,226 +22,256 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  String _selectedPayment = 'Credit Card';
+  String? _selectedPaymentMethodId;
 
   @override
   Widget build(BuildContext context) {
-    final vehicle = context.watch<VehicleService>().getVehicleById(widget.vehicleId);
-    if (vehicle == null) {
-      return const Scaffold(body: Center(child: Text('Vehicle not found')));
+    final userService = context.watch<UserService>();
+    final bookingService = context.watch<BookingService>();
+    final vehicleService = context.watch<VehicleService>();
+    final currentUser = userService.currentUser;
+    final vehicle = vehicleService.getVehicleById(widget.vehicleId);
+
+    if (vehicle == null || currentUser == null) {
+      return const Scaffold(
+          body: Center(child: Text('Unable to continue checkout')));
+    }
+
+    final draft = bookingService.getDraft(
+      userId: currentUser.id,
+      vehicleId: widget.vehicleId,
+    );
+
+    final pickupDate =
+        draft?.pickupDate ?? DateTime.now().add(const Duration(days: 1));
+    final returnDate =
+        draft?.returnDate ?? DateTime.now().add(const Duration(days: 4));
+    final pickupLocation = draft?.pickupLocation ?? vehicle.location;
+    final rentalFee = draft?.rentalFee ?? vehicle.pricePerDay * 3;
+    final insuranceFee = draft?.insuranceFee ?? 45.0;
+    final serviceFee = draft?.serviceFee ?? 12.50;
+    final taxes = draft?.taxes ?? 18.00;
+    final total =
+        draft?.totalAmount ?? (rentalFee + insuranceFee + serviceFee + taxes);
+    final days = (returnDate.difference(pickupDate).inDays).clamp(1, 365);
+
+    final paymentMethods = userService.currentUserPaymentMethods;
+    if (_selectedPaymentMethodId == null && paymentMethods.isNotEmpty) {
+      _selectedPaymentMethodId = paymentMethods
+          .firstWhere(
+            (method) => method.isDefault,
+            orElse: () => paymentMethods.first,
+          )
+          .id;
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
-    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final successColor = isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final successColor =
+        isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final bottomInset = MediaQuery.of(context).padding.bottom + 140;
 
-    final total = 312.50;
+    Future<void> onPayNow() async {
+      final bookingService = context.read<BookingService>();
+      final notificationService = context.read<NotificationService>();
+
+      if (_selectedPaymentMethodId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Add a payment method before paying')),
+        );
+        return;
+      }
+
+      var booking = await bookingService.confirmDraft(
+        userId: currentUser.id,
+        vehicleId: widget.vehicleId,
+      );
+
+      booking ??= BookingModel(
+        id: 'RM${DateTime.now().microsecondsSinceEpoch.toString().substring(7)}',
+        userId: currentUser.id,
+        vehicleId: widget.vehicleId,
+        ownerId: vehicle.ownerId,
+        pickupDate: pickupDate,
+        returnDate: returnDate,
+        pickupLocation: pickupLocation,
+        insurancePlan: draft?.insurancePlan ?? 'Premium Protection',
+        rentalFee: rentalFee,
+        insuranceFee: insuranceFee,
+        serviceFee: serviceFee,
+        taxes: taxes,
+        totalAmount: total,
+        status: BookingStatus.confirmed,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      if (draft == null) {
+        await bookingService.createBooking(booking);
+      }
+
+      await notificationService.sendToUser(
+        userId: currentUser.id,
+        title: 'Payment Successful',
+        message: 'Booking ${booking.id} has been confirmed.',
+      );
+      await notificationService.sendToUser(
+        userId: vehicle.ownerId,
+        title: 'New Booking Received',
+        message: '${vehicle.name} has a confirmed booking (${booking.id}).',
+      );
+
+      if (!mounted) return;
+      await showDialog<void>(
+        context: this.context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Payment Successful'),
+          content: Text('Your booking ${booking!.id} has been confirmed.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      this.context.go('/user-dashboard');
+    }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
-                        color:
-                            isDark
-                                ? AppColors.darkDivider
-                                : AppColors.lightDivider,
-                      ),
+      bottomNavigationBar: Container(
+        padding: AppSpacing.paddingLg,
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ElevatedButton.icon(
+                onPressed: onPayNow,
+                icon: const Icon(Icons.lock_rounded),
+                label: Text('Pay \$${total.toStringAsFixed(2)} Now'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_outline_rounded,
+                      size: 16, color: successColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Payment Confidence Guaranteed',
+                    style: context.textStyles.bodySmall?.copyWith(
+                      color: successColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  child: SafeArea(
-                    bottom: false,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: AppSpacing.paddingLg,
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark
+                          ? AppColors.darkDivider
+                          : AppColors.lightDivider,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded, size: 24),
+                      onPressed: () {
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/booking/${widget.vehicleId}');
+                        }
+                      },
+                    ),
+                    Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_rounded, size: 24),
-                          onPressed: () => context.pop(),
-                        ),
-                        Row(
-                          children: [
-                            Icon(Icons.shield_rounded, color: successColor, size: 20),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Secure Checkout',
-                              style: context.textStyles.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.info_outline_rounded, size: 24),
-                          onPressed: () {},
+                        Icon(Icons.shield_rounded,
+                            color: successColor, size: 20),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Secure Checkout',
+                          style: context.textStyles.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.info_outline_rounded, size: 24),
+                      onPressed: () {},
+                    ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.sm,
-                  ),
-                  color: const Color(0xFFF0FDF4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.lock_rounded, size: 14, color: successColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        'End-to-end encrypted payment',
-                        style: context.textStyles.labelMedium?.copyWith(
-                          color: successColor,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Row(
-                    children: [
-                      Column(
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: successColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Dates',
-                            style: context.textStyles.labelSmall?.copyWith(
-                              color:
-                                  isDark
-                                      ? AppColors.darkSecondaryText
-                                      : AppColors.lightSecondaryText,
-                            ),
-                          ),
-                        ],
+                color: const Color(0xFFF0FDF4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_rounded, size: 14, color: successColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      'End-to-end encrypted payment',
+                      style: context.textStyles.labelMedium?.copyWith(
+                        color: successColor,
                       ),
-                      Expanded(child: Container(height: 2, color: successColor)),
-                      Column(
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: primaryColor,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Text(
-                              '2',
-                              style: context.textStyles.labelSmall?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Payment',
-                            style: context.textStyles.labelSmall?.copyWith(
-                              color: primaryColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Expanded(
-                        child: Container(
-                          height: 2,
-                          color:
-                              isDark
-                                  ? AppColors.darkDivider
-                                  : AppColors.lightDivider,
-                        ),
-                      ),
-                      Column(
-                        children: [
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color:
-                                    isDark
-                                        ? AppColors.darkDivider
-                                        : AppColors.lightDivider,
-                              ),
-                            ),
-                            child: Text(
-                              '3',
-                              style: context.textStyles.labelSmall?.copyWith(
-                                color:
-                                    isDark
-                                        ? AppColors.darkSecondaryText
-                                        : AppColors.lightSecondaryText,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Confirm',
-                            style: context.textStyles.labelSmall?.copyWith(
-                              color:
-                                  isDark
-                                      ? AppColors.darkSecondaryText
-                                      : AppColors.lightSecondaryText,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Container(
-                  margin: AppSpacing.horizontalLg,
+              ),
+              Padding(
+                padding: AppSpacing.paddingLg,
+                child: Container(
                   padding: AppSpacing.paddingMd,
                   decoration: BoxDecoration(
                     color: surfaceColor,
                     borderRadius: BorderRadius.circular(AppRadius.xl),
                     border: Border.all(
-                      color: isDark ? AppColors.darkDivider : AppColors.lightDivider,
+                      color: isDark
+                          ? AppColors.darkDivider
+                          : AppColors.lightDivider,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
                   ),
                   child: Row(
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(AppRadius.lg),
-                        child: Image.asset(
-                          vehicle.imageUrl,
+                        child: Image(
+                          image: imageProviderWithFallback(vehicle.imageUrl),
                           width: 100,
                           height: 70,
                           fit: BoxFit.cover,
@@ -253,15 +289,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                const Icon(Icons.calendar_today_rounded, size: 14),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Oct 24 - Oct 27 (3 Days)',
-                                  style: context.textStyles.bodySmall,
-                                ),
-                              ],
+                            Text(
+                              '${DateFormat('dd MMM').format(pickupDate)} - ${DateFormat('dd MMM yyyy').format(returnDate)} ($days days)',
+                              style: context.textStyles.bodySmall,
+                            ),
+                            Text(
+                              'Pickup: $pickupLocation',
+                              style: context.textStyles.bodySmall,
                             ),
                           ],
                         ),
@@ -269,313 +303,176 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Select Payment Method',
-                        style: context.textStyles.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+              ),
+              Padding(
+                padding: AppSpacing.horizontalLg,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Select Payment Method',
+                      style: context.textStyles.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      PaymentMethodCard(
-                        icon: Icons.credit_card_rounded,
-                        name: 'Credit Card',
-                        detail: 'Visa Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢Ã¢â‚¬Â¢ 4242',
-                        isSelected: _selectedPayment == 'Credit Card',
-                        onTap: () => setState(() => _selectedPayment = 'Credit Card'),
-                      ),
-                      PaymentMethodCard(
-                        icon: Icons.account_balance_wallet_rounded,
-                        name: 'Apple Pay',
-                        detail: 'Instant & Secure',
-                        isSelected: _selectedPayment == 'Apple Pay',
-                        onTap: () => setState(() => _selectedPayment = 'Apple Pay'),
-                      ),
-                      PaymentMethodCard(
-                        icon: Icons.account_balance_rounded,
-                        name: 'UPI / Bank Transfer',
-                        detail: 'Pay via any UPI app',
-                        isSelected: _selectedPayment == 'UPI',
-                        onTap: () => setState(() => _selectedPayment = 'UPI'),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(
-                            color:
-                                isDark
-                                    ? AppColors.darkDivider
-                                    : AppColors.lightDivider,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.local_offer_outlined,
-                              color:
-                                  isDark
-                                      ? AppColors.darkSecondaryText
-                                      : AppColors.lightSecondaryText,
-                              size: 20,
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: TextField(
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter promo code',
-                                  border: InputBorder.none,
-                                  isDense: true,
-                                  contentPadding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {},
-                              child: Text(
-                                'Apply',
-                                style: TextStyle(color: primaryColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    if (paymentMethods.isEmpty)
                       Container(
                         padding: AppSpacing.paddingLg,
                         decoration: BoxDecoration(
                           color: surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.xl),
+                          borderRadius: BorderRadius.circular(AppRadius.lg),
                           border: Border.all(
-                            color:
-                                isDark
-                                    ? AppColors.darkDivider
-                                    : AppColors.lightDivider,
+                            color: isDark
+                                ? AppColors.darkDivider
+                                : AppColors.lightDivider,
                           ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              'Price Details',
-                              style: context.textStyles.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            const SummaryRow(
-                              label: 'Rental Fee (\$85 x 3 days)',
-                              value: '\$255.00',
-                            ),
-                            const SummaryRow(
-                              label: 'Insurance (Premium)',
-                              value: '\$45.00',
-                            ),
-                            const SummaryRow(
-                              label: 'Service Fee',
-                              value: '\$12.50',
-                            ),
-                            Divider(
-                              color:
-                                  isDark
-                                      ? AppColors.darkDivider
-                                      : AppColors.lightDivider,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Total Amount',
-                                  style: context.textStyles.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '\$${total.toStringAsFixed(2)}',
-                                  style: context.textStyles.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Container(
-                        padding: AppSpacing.paddingMd,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(AppRadius.lg),
-                          border: Border.all(
-                            color:
-                                isDark
-                                    ? AppColors.darkDivider
-                                    : AppColors.lightDivider,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.security_rounded,
-                                  color:
-                                      isDark
-                                          ? AppColors.darkSecondary
-                                          : AppColors.lightSecondary,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Text(
-                                  '256-bit SSL Secure Encryption',
-                                  style: context.textStyles.labelMedium,
-                                ),
-                              ],
-                            ),
+                            const Text('No payment methods available.'),
                             const SizedBox(height: AppSpacing.sm),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.verified_user_rounded,
-                                  color: successColor,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: AppSpacing.sm),
-                                Expanded(
-                                  child: Text(
-                                    'Your transaction is protected by RentMyRide Guarantee',
-                                    style: context.textStyles.bodySmall,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Divider(
-                              color:
-                                  isDark
-                                      ? AppColors.darkDivider
-                                      : AppColors.lightDivider,
-                            ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Payment Partner',
-                                  style: context.textStyles.labelSmall?.copyWith(
-                                    color:
-                                        isDark
-                                            ? AppColors.darkSecondaryText
-                                            : AppColors.lightSecondaryText,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.payments_rounded,
-                                      size: 16,
-                                      color: primaryColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      'Stripe',
-                                      style: context.textStyles.labelLarge
-                                          ?.copyWith(fontWeight: FontWeight.w800),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                            OutlinedButton(
+                              onPressed: () => context.push('/profile'),
+                              child: const Text('Add Payment Method'),
                             ),
                           ],
                         ),
+                      )
+                    else
+                      ...paymentMethods.map(
+                        (method) => PaymentMethodCard(
+                          icon: Icons.credit_card_rounded,
+                          name: method.brand,
+                          detail: '**** ${method.last4} - ${method.expiry}',
+                          isSelected: _selectedPaymentMethodId == method.id,
+                          onTap: () => setState(() {
+                            _selectedPaymentMethodId = method.id;
+                          }),
+                        ),
                       ),
-                      const SizedBox(height: 120),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: AppSpacing.paddingLg,
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                border: Border(
-                  top: BorderSide(
-                    color:
-                        isDark ? AppColors.darkDivider : AppColors.lightDivider,
-                  ),
-                ),
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder:
-                              (ctx) => AlertDialog(
-                                title: const Text('Payment Successful'),
-                                content: const Text(
-                                  'Your booking has been confirmed!',
+                    const SizedBox(height: AppSpacing.lg),
+                    Container(
+                      padding: AppSpacing.paddingLg,
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(AppRadius.xl),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.darkDivider
+                              : AppColors.lightDivider,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Price Details',
+                            style: context.textStyles.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          SummaryRow(
+                            label:
+                                'Rental Fee (\$${vehicle.pricePerDay.toStringAsFixed(0)} x $days days)',
+                            value: '\$${rentalFee.toStringAsFixed(2)}',
+                          ),
+                          SummaryRow(
+                            label:
+                                'Insurance (${draft?.insurancePlan ?? 'Premium'})',
+                            value: '\$${insuranceFee.toStringAsFixed(2)}',
+                          ),
+                          SummaryRow(
+                            label: 'Service Fee',
+                            value: '\$${serviceFee.toStringAsFixed(2)}',
+                          ),
+                          SummaryRow(
+                            label: 'Taxes',
+                            value: '\$${taxes.toStringAsFixed(2)}',
+                          ),
+                          Divider(
+                            color: isDark
+                                ? AppColors.darkDivider
+                                : AppColors.lightDivider,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total Amount',
+                                style: context.textStyles.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.pop(ctx);
-                                      context.go('/user-dashboard');
-                                    },
-                                    child: const Text('OK'),
-                                  ),
-                                ],
                               ),
-                        );
-                      },
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      label: Text('Pay \$${total.toStringAsFixed(2)} Now'),
-                      iconAlignment: IconAlignment.end,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
+                              Text(
+                                '\$${total.toStringAsFixed(2)}',
+                                style: context.textStyles.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.lock_outline_rounded,
-                          size: 16,
-                          color: successColor,
+                    Container(
+                      padding: AppSpacing.paddingMd,
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.darkDivider
+                              : AppColors.lightDivider,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Payment Confidence Guaranteed',
-                          style: context.textStyles.bodySmall?.copyWith(
-                            color: successColor,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.security_rounded,
+                                color: isDark
+                                    ? AppColors.darkSecondary
+                                    : AppColors.lightSecondary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Text(
+                                '256-bit SSL Secure Encryption',
+                                style: context.textStyles.labelMedium,
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: AppSpacing.sm),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.verified_user_rounded,
+                                color: successColor,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  'Transaction protected by RentMyRide Guarantee',
+                                  style: context.textStyles.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

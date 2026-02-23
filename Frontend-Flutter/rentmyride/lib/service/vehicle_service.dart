@@ -1,16 +1,28 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:rentmyride/model/review_model.dart';
 import 'package:rentmyride/model/vehicle_model.dart';
+import 'package:rentmyride/model/vehicle_submission_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class VehicleService extends ChangeNotifier {
   static const String _vehiclesKey = 'vehicles';
+  static const String _reviewsKey = 'vehicle_reviews';
+  static const String _vehicleSubmissionsKey = 'vehicle_submissions';
 
   List<VehicleModel> _vehicles = [];
+  Map<String, List<ReviewModel>> _reviewsByVehicle = {};
+  List<VehicleSubmissionModel> _vehicleSubmissions = [];
   bool _isLoading = false;
 
   List<VehicleModel> get vehicles => _vehicles;
+  List<VehicleSubmissionModel> get pendingSubmissions => _vehicleSubmissions
+      .where((entry) => entry.status == VehicleSubmissionStatus.pending)
+      .toList();
+  List<VehicleSubmissionModel> get reviewedSubmissions => _vehicleSubmissions
+      .where((entry) => entry.status != VehicleSubmissionStatus.pending)
+      .toList();
   bool get isLoading => _isLoading;
 
   Future<void> initialize() async {
@@ -34,10 +46,24 @@ class VehicleService extends ChangeNotifier {
         }
       }
 
+      _loadReviews(prefs);
+      _loadSubmissions(prefs);
       await _ensureBikeSeedData();
+      _ensureSeedReviews();
+      _ensureSeedSubmissions();
+      await Future.wait([
+        _saveReviews(),
+        _saveSubmissions(),
+      ]);
     } catch (e) {
       debugPrint('Failed to initialize vehicles: $e');
       await _initializeSampleData();
+      _ensureSeedReviews();
+      _ensureSeedSubmissions();
+      await Future.wait([
+        _saveReviews(),
+        _saveSubmissions(),
+      ]);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -289,6 +315,147 @@ class VehicleService extends ChangeNotifier {
     }
   }
 
+  void _loadReviews(SharedPreferences prefs) {
+    try {
+      final raw = prefs.getString(_reviewsKey);
+      if (raw == null || raw.isEmpty) {
+        _reviewsByVehicle = {};
+        return;
+      }
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      _reviewsByVehicle = decoded.map((vehicleId, entries) {
+        final reviews = (entries as List<dynamic>)
+            .map((entry) => ReviewModel.fromJson(entry))
+            .toList();
+        return MapEntry(vehicleId, reviews);
+      });
+    } catch (e) {
+      debugPrint('Failed to load vehicle reviews: $e');
+      _reviewsByVehicle = {};
+    }
+  }
+
+  void _loadSubmissions(SharedPreferences prefs) {
+    try {
+      final raw = prefs.getString(_vehicleSubmissionsKey);
+      if (raw == null || raw.isEmpty) {
+        _vehicleSubmissions = [];
+        return;
+      }
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      _vehicleSubmissions = decoded
+          .map((entry) => VehicleSubmissionModel.fromJson(entry))
+          .toList();
+    } catch (e) {
+      debugPrint('Failed to load vehicle submissions: $e');
+      _vehicleSubmissions = [];
+    }
+  }
+
+  void _ensureSeedReviews() {
+    final now = DateTime.now();
+    void ensureReview(
+      String vehicleId,
+      List<ReviewModel> seedReviews,
+    ) {
+      _reviewsByVehicle.putIfAbsent(vehicleId, () => seedReviews);
+    }
+
+    ensureReview(
+      '1',
+      [
+        ReviewModel(
+          id: 'r-1-1',
+          vehicleId: '1',
+          reviewerName: 'Jordan',
+          rating: 4.9,
+          comment: 'Smooth pickup and super clean interior.',
+          createdAt: now.subtract(const Duration(days: 3)),
+        ),
+        ReviewModel(
+          id: 'r-1-2',
+          vehicleId: '1',
+          reviewerName: 'Priya',
+          rating: 4.8,
+          comment: 'Great battery range and easy handover.',
+          createdAt: now.subtract(const Duration(days: 7)),
+        ),
+      ],
+    );
+    ensureReview(
+      '2',
+      [
+        ReviewModel(
+          id: 'r-2-1',
+          vehicleId: '2',
+          reviewerName: 'Liam',
+          rating: 5.0,
+          comment: 'Incredible drive experience, exactly as listed.',
+          createdAt: now.subtract(const Duration(days: 4)),
+        ),
+      ],
+    );
+  }
+
+  void _ensureSeedSubmissions() {
+    if (_vehicleSubmissions.isNotEmpty) return;
+    final now = DateTime.now();
+    _vehicleSubmissions = [
+      VehicleSubmissionModel(
+        id: 'sub-seed-1',
+        ownerId: '2',
+        vehicle: VehicleModel(
+          id: 'pending-1',
+          name: 'Audi Q5 Premium',
+          ownerId: '2',
+          category: 'SUV',
+          imageUrl: 'assets/images/black_luxury_BMW_SUV_null_1771667576545.jpg',
+          additionalImages: const [],
+          pricePerDay: 132,
+          rating: 0,
+          reviewCount: 0,
+          fuelType: 'Petrol',
+          transmission: 'Automatic',
+          seats: 5,
+          location: 'Los Angeles, CA',
+          description: 'Owner-submitted premium SUV awaiting admin approval.',
+          features: const ['Sunroof', 'ABS', 'Cruise Control'],
+          securityDeposit: 850,
+          createdAt: now.subtract(const Duration(days: 1)),
+          updatedAt: now.subtract(const Duration(days: 1)),
+        ),
+        documents: const ['RC.pdf', 'Insurance.pdf'],
+        status: VehicleSubmissionStatus.pending,
+        submittedAt: now.subtract(const Duration(days: 1)),
+        updatedAt: now.subtract(const Duration(days: 1)),
+      ),
+    ];
+  }
+
+  Future<void> _saveReviews() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = _reviewsByVehicle.map(
+        (vehicleId, reviews) => MapEntry(
+            vehicleId, reviews.map((entry) => entry.toJson()).toList()),
+      );
+      await prefs.setString(_reviewsKey, jsonEncode(encoded));
+    } catch (e) {
+      debugPrint('Failed to save vehicle reviews: $e');
+    }
+  }
+
+  Future<void> _saveSubmissions() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = jsonEncode(
+          _vehicleSubmissions.map((entry) => entry.toJson()).toList());
+      await prefs.setString(_vehicleSubmissionsKey, encoded);
+    } catch (e) {
+      debugPrint('Failed to save vehicle submissions: $e');
+    }
+  }
+
   List<VehicleModel> getVehiclesByCategory(String category) {
     final normalized = category.trim().toLowerCase();
 
@@ -352,5 +519,105 @@ class VehicleService extends ChangeNotifier {
     _vehicles.removeWhere((v) => v.id == id);
     await _saveVehicles();
     notifyListeners();
+  }
+
+  List<ReviewModel> getReviewsForVehicle(String vehicleId) {
+    final reviews = _reviewsByVehicle[vehicleId] ?? const <ReviewModel>[];
+    final sorted = [...reviews];
+    sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  }
+
+  List<ReviewModel> getReviewsForOwner(String ownerId) {
+    final ownerVehicleIds = _vehicles
+        .where((vehicle) => vehicle.ownerId == ownerId)
+        .map((vehicle) => vehicle.id)
+        .toSet();
+
+    final collected = <ReviewModel>[];
+    for (final vehicleId in ownerVehicleIds) {
+      collected.addAll(_reviewsByVehicle[vehicleId] ?? const <ReviewModel>[]);
+    }
+    collected.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return collected;
+  }
+
+  Future<void> addReview(ReviewModel review) async {
+    final reviews = [
+      ...(_reviewsByVehicle[review.vehicleId] ?? const <ReviewModel>[]),
+    ];
+    reviews.add(review);
+    _reviewsByVehicle[review.vehicleId] = reviews;
+    await _saveReviews();
+    notifyListeners();
+  }
+
+  Future<void> submitVehicleForApproval({
+    required VehicleModel vehicle,
+    required String ownerId,
+    required List<String> documents,
+  }) async {
+    final now = DateTime.now();
+    final submission = VehicleSubmissionModel(
+      id: 'sub-${now.microsecondsSinceEpoch}',
+      vehicle: vehicle,
+      ownerId: ownerId,
+      documents: documents,
+      status: VehicleSubmissionStatus.pending,
+      submittedAt: now,
+      updatedAt: now,
+    );
+    _vehicleSubmissions = [submission, ..._vehicleSubmissions];
+    await _saveSubmissions();
+    notifyListeners();
+  }
+
+  Future<VehicleSubmissionModel?> approveVehicleSubmission(
+      String submissionId) async {
+    final index =
+        _vehicleSubmissions.indexWhere((entry) => entry.id == submissionId);
+    if (index == -1) return null;
+    final submission = _vehicleSubmissions[index];
+    if (submission.status != VehicleSubmissionStatus.pending) return null;
+
+    final now = DateTime.now();
+    final approvedSubmission = submission.copyWith(
+      status: VehicleSubmissionStatus.approved,
+      updatedAt: now,
+      vehicle: submission.vehicle.copyWith(updatedAt: now),
+    );
+    _vehicleSubmissions[index] = approvedSubmission;
+
+    if (!_vehicles.any((vehicle) => vehicle.id == submission.vehicle.id)) {
+      _vehicles = [..._vehicles, approvedSubmission.vehicle];
+    }
+
+    await Future.wait([
+      _saveVehicles(),
+      _saveSubmissions(),
+    ]);
+    notifyListeners();
+    return approvedSubmission;
+  }
+
+  Future<VehicleSubmissionModel?> rejectVehicleSubmission(
+    String submissionId, {
+    required String reason,
+  }) async {
+    final index =
+        _vehicleSubmissions.indexWhere((entry) => entry.id == submissionId);
+    if (index == -1) return null;
+    final submission = _vehicleSubmissions[index];
+    if (submission.status != VehicleSubmissionStatus.pending) return null;
+
+    final rejected = submission.copyWith(
+      status: VehicleSubmissionStatus.rejected,
+      rejectionReason: reason,
+      updatedAt: DateTime.now(),
+    );
+    _vehicleSubmissions[index] = rejected;
+    await _saveSubmissions();
+    notifyListeners();
+    return rejected;
   }
 }

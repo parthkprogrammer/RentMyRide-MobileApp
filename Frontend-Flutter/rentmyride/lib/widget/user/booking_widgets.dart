@@ -40,6 +40,7 @@ class SelectionTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool isSelected;
+  final VoidCallback? onTap;
 
   const SelectionTile({
     super.key,
@@ -47,6 +48,7 @@ class SelectionTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.isSelected,
+    this.onTap,
   });
 
   @override
@@ -57,65 +59,72 @@ class SelectionTile extends StatelessWidget {
     final backgroundColor =
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-      padding: AppSpacing.paddingMd,
-      decoration: BoxDecoration(
-        color: surfaceColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(
-          color:
-              isSelected
-                  ? primaryColor
-                  : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-            child: Icon(
-              icon,
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+          padding: AppSpacing.paddingMd,
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(
               color:
                   isSelected
                       ? primaryColor
-                      : (isDark
-                          ? AppColors.darkSecondaryText
-                          : AppColors.lightSecondaryText),
-              size: 20,
+                      : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
             ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: context.textStyles.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                Text(subtitle, style: context.textStyles.bodySmall),
-              ],
-            ),
-          ),
-          Icon(
-            isSelected
-                ? Icons.check_circle_rounded
-                : Icons.radio_button_unchecked_rounded,
-            color:
+                child: Icon(
+                  icon,
+                  color:
+                      isSelected
+                          ? primaryColor
+                          : (isDark
+                              ? AppColors.darkSecondaryText
+                              : AppColors.lightSecondaryText),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: context.textStyles.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(subtitle, style: context.textStyles.bodySmall),
+                  ],
+                ),
+              ),
+              Icon(
                 isSelected
-                    ? primaryColor
-                    : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
-            size: 22,
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color:
+                    isSelected
+                        ? primaryColor
+                        : (isDark ? AppColors.darkDivider : AppColors.lightDivider),
+                size: 22,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -161,10 +170,9 @@ class InsuranceCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            SizedBox(
               width: 20,
               height: 20,
-              margin: const EdgeInsets.only(top: 4),
               child: Icon(
                 isSelected
                     ? Icons.check_circle_rounded
@@ -232,15 +240,18 @@ class PriceRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: context.textStyles.bodyMedium?.copyWith(
-              color:
-                  isDark
-                      ? AppColors.darkSecondaryText
-                      : AppColors.lightSecondaryText,
+          Expanded(
+            child: Text(
+              label,
+              style: context.textStyles.bodyMedium?.copyWith(
+                color:
+                    isDark
+                        ? AppColors.darkSecondaryText
+                        : AppColors.lightSecondaryText,
+              ),
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
           Text(
             value,
             style: context.textStyles.bodyMedium?.copyWith(

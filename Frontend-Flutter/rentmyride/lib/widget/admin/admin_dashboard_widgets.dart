@@ -19,8 +19,10 @@ class MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
-    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final primaryColor =
+        isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final backgroundColor =
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
 
@@ -58,12 +60,11 @@ class MetricCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color:
-                      isPositive
-                          ? (isDark
-                              ? AppColors.darkSuccess
-                              : AppColors.lightSuccess)
-                          : (isDark ? AppColors.darkError : AppColors.lightError),
+                  color: isPositive
+                      ? (isDark
+                          ? AppColors.darkSuccess
+                          : AppColors.lightSuccess)
+                      : (isDark ? AppColors.darkError : AppColors.lightError),
                   borderRadius: BorderRadius.circular(AppRadius.full),
                 ),
                 child: Text(
@@ -103,10 +104,12 @@ class ReportedVehicleItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final backgroundColor =
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final primaryColor =
+        isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -177,8 +180,10 @@ class ApprovalItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
-    final successColor = isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final successColor =
+        isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
     final errorColor = isDark ? AppColors.darkError : AppColors.lightError;
     final backgroundColor =
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
@@ -240,7 +245,8 @@ class ApprovalItem extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.check_rounded, color: successColor, size: 20),
+                  icon:
+                      Icon(Icons.check_rounded, color: successColor, size: 20),
                   onPressed: () {},
                   padding: EdgeInsets.zero,
                 ),
@@ -285,12 +291,15 @@ class _UserManageCardState extends State<UserManageCard> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
     final backgroundColor =
         isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final primaryColor = isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
+    final primaryColor =
+        isDark ? AppColors.darkPrimary : AppColors.lightPrimary;
     final errorColor = isDark ? AppColors.darkError : AppColors.lightError;
-    final successColor = isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
+    final successColor =
+        isDark ? AppColors.darkSuccess : AppColors.lightSuccess;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -348,7 +357,8 @@ class _UserManageCardState extends State<UserManageCard> {
               ),
             ],
           ),
-          Divider(color: isDark ? AppColors.darkDivider : AppColors.lightDivider),
+          Divider(
+              color: isDark ? AppColors.darkDivider : AppColors.lightDivider),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -363,12 +373,11 @@ class _UserManageCardState extends State<UserManageCard> {
                   Text(
                     widget.reported ? 'Flagged for review' : 'Account Healthy',
                     style: context.textStyles.labelSmall?.copyWith(
-                      color:
-                          widget.reported
-                              ? errorColor
-                              : (isDark
-                                  ? AppColors.darkSecondaryText
-                                  : AppColors.lightSecondaryText),
+                      color: widget.reported
+                          ? errorColor
+                          : (isDark
+                              ? AppColors.darkSecondaryText
+                              : AppColors.lightSecondaryText),
                     ),
                   ),
                 ],
@@ -378,16 +387,15 @@ class _UserManageCardState extends State<UserManageCard> {
                   Text(
                     'Suspend',
                     style: context.textStyles.labelMedium?.copyWith(
-                      color:
-                          isDark
-                              ? AppColors.darkSecondaryText
-                              : AppColors.lightSecondaryText,
+                      color: isDark
+                          ? AppColors.darkSecondaryText
+                          : AppColors.lightSecondaryText,
                     ),
                   ),
                   Switch(
                     value: _isSuspended,
                     onChanged: (v) => setState(() => _isSuspended = v),
-                    activeColor: errorColor,
+                    activeThumbColor: errorColor,
                   ),
                 ],
               ),
@@ -414,7 +422,8 @@ class SystemCommandCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = isDark ? AppColors.darkSurface : AppColors.lightSurface;
+    final surfaceColor =
+        isDark ? AppColors.darkSurface : AppColors.lightSurface;
 
     return Container(
       padding: AppSpacing.paddingMd,
@@ -430,7 +439,9 @@ class SystemCommandCard extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 28),
           const SizedBox(height: AppSpacing.sm),
-          Text(label, style: context.textStyles.labelMedium, textAlign: TextAlign.center),
+          Text(label,
+              style: context.textStyles.labelMedium,
+              textAlign: TextAlign.center),
         ],
       ),
     );

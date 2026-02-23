@@ -206,8 +206,8 @@ class VehicleCard extends StatelessWidget {
                     topLeft: Radius.circular(AppRadius.lg),
                     topRight: Radius.circular(AppRadius.lg),
                   ),
-                  child: Image.asset(
-                    vehicle.imageUrl,
+                  child: Image(
+                    image: imageProviderWithFallback(vehicle.imageUrl),
                     height: 160,
                     width: double.infinity,
                     fit: BoxFit.cover,

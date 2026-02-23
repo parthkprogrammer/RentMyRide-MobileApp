@@ -6,9 +6,14 @@ import 'package:rentmyride/screen/user/booking_screen.dart';
 import 'package:rentmyride/screen/user/payment_screen.dart';
 import 'package:rentmyride/screen/user/chat_screen.dart';
 import 'package:rentmyride/screen/user/profile_screen.dart';
+import 'package:rentmyride/screen/user/help_center_screen.dart';
+import 'package:rentmyride/screen/user/privacy_policy_screen.dart';
 import 'package:rentmyride/screen/owner/owner_dashboard.dart';
 import 'package:rentmyride/screen/owner/add_vehicle_screen.dart';
+import 'package:rentmyride/screen/owner/owner_profile_screen.dart';
+import 'package:rentmyride/screen/owner/owner_bookings_screen.dart';
 import 'package:rentmyride/screen/admin/admin_dashboard.dart';
+import 'package:rentmyride/screen/admin/admin_profile_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -62,6 +67,16 @@ class AppRouter {
         pageBuilder: (context, state) => NoTransitionPage(child: const ProfileScreen()),
       ),
       GoRoute(
+        path: AppRoutes.helpCenter,
+        name: 'help-center',
+        pageBuilder: (context, state) => NoTransitionPage(child: const HelpCenterScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.privacyPolicy,
+        name: 'privacy-policy',
+        pageBuilder: (context, state) => NoTransitionPage(child: const PrivacyPolicyScreen()),
+      ),
+      GoRoute(
         path: AppRoutes.ownerDashboard,
         name: 'owner-dashboard',
         pageBuilder: (context, state) => NoTransitionPage(child: const OwnerDashboard()),
@@ -72,9 +87,24 @@ class AppRouter {
         pageBuilder: (context, state) => NoTransitionPage(child: const AddVehicleScreen()),
       ),
       GoRoute(
+        path: AppRoutes.ownerProfile,
+        name: 'owner-profile',
+        pageBuilder: (context, state) => NoTransitionPage(child: const OwnerProfileScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.ownerBookings,
+        name: 'owner-bookings',
+        pageBuilder: (context, state) => NoTransitionPage(child: const OwnerBookingsScreen()),
+      ),
+      GoRoute(
         path: AppRoutes.adminDashboard,
         name: 'admin-dashboard',
         pageBuilder: (context, state) => NoTransitionPage(child: const AdminDashboard()),
+      ),
+      GoRoute(
+        path: AppRoutes.adminProfile,
+        name: 'admin-profile',
+        pageBuilder: (context, state) => NoTransitionPage(child: const AdminProfileScreen()),
       ),
     ],
   );
@@ -88,7 +118,12 @@ class AppRoutes {
   static const String payment = '/payment/:id';
   static const String chat = '/chat/:id';
   static const String profile = '/profile';
+  static const String helpCenter = '/help-center';
+  static const String privacyPolicy = '/privacy-policy';
   static const String ownerDashboard = '/owner-dashboard';
   static const String addVehicle = '/add-vehicle';
+  static const String ownerProfile = '/owner-profile';
+  static const String ownerBookings = '/owner-bookings';
   static const String adminDashboard = '/admin-dashboard';
+  static const String adminProfile = '/admin-profile';
 }
